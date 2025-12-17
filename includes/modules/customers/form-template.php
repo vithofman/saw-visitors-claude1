@@ -470,6 +470,10 @@ $language_options = array(
         <!-- ============================================
              FORM ACTIONS
              ============================================ -->
+        <?php 
+        // Form actions - only show outside sidebar (sidebar uses FAB save button)
+        if (!$in_sidebar): 
+        ?>
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 <span class="saw-btn-icon">💾</span>
@@ -477,13 +481,11 @@ $language_options = array(
                     ? esc_html($tr('btn_save', 'Uložit změny')) 
                     : esc_html($tr('btn_create', 'Vytvořit zákazníka')); ?>
             </button>
-            
-            <?php if (!$in_sidebar): ?>
-                <a href="<?php echo esc_url(home_url('/admin/customers/')); ?>" class="saw-button saw-button-secondary">
-                    <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
-                </a>
-            <?php endif; ?>
+            <a href="<?php echo esc_url(home_url('/admin/customers/')); ?>" class="saw-button saw-button-secondary">
+                <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
+            </a>
         </div>
+        <?php endif; ?>
         
     </form>
 </div>

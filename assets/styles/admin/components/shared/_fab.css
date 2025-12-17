@@ -1,9 +1,12 @@
 /**
  * SAW Admin - Floating Action Buttons
  * @package SAW_Visitors
- * @version 4.0.0
+ * @version 5.0.0
  * 
- * FIXED: FAB buttons now stay visible when sidebar is open (moved to left of sidebar)
+ * NOTE: Detail mode FABs (edit/delete) are now rendered INSIDE sidebar
+ * via detail-sidebar.php and styled in _sidebar-wrapper.css
+ * 
+ * This file handles only the list mode "Add" FAB button
  */
 
 .sa-fab {
@@ -59,51 +62,39 @@
 }
 
 /* ============================================
-   FAB POSITIONING WHEN SIDEBAR IS OPEN
-   Move FAB to the LEFT of the sidebar so it stays visible
+   FAB POSITIONING - SIMPLIFIED
+   Detail mode FABs are now inside sidebar
+   This handles only list mode "Add" FAB
    ============================================ */
 
-/* Desktop: Sidebar is 720px, move FAB to left of it */
-body:has(.sa-sidebar--active) .sa-fab,
-body:has(.sa-sidebar--active) .sa-fab-group {
-    right: calc(720px + var(--saw-space-6, 24px)) !important;
-    z-index: 10001 !important; /* Above sidebar */
-    transition: right 0.3s ease, z-index 0s;
+/* Hide list FAB when sidebar is open (detail FABs are inside sidebar) */
+body:has(.sa-sidebar--active) .sa-fab:not(.sa-sidebar-fab),
+body:has(.sa-sidebar--active) .sa-fab-group:not(.sa-sidebar-fab-container) {
+    display: none !important;
 }
 
-/* Tablet (769-1024px): Sidebar is 480px */
+/* Tablet adjustments for list FAB */
 @media (max-width: 1024px) and (min-width: 769px) {
-    .sa-fab,
-    .sa-fab-group {
+    .sa-fab:not(.sa-sidebar-fab),
+    .sa-fab-group:not(.sa-sidebar-fab-container) {
         bottom: calc(var(--saw-bottom-nav-height, 52px) + var(--saw-space-4, 16px));
     }
-    
-    body:has(.sa-sidebar--active) .sa-fab,
-    body:has(.sa-sidebar--active) .sa-fab-group {
-        right: calc(480px + var(--saw-space-4, 16px)) !important;
-    }
 }
 
-/* Mobile (768px and below): Sidebar is 100%, hide FAB or move to top */
+/* Mobile adjustments for list FAB */
 @media (max-width: 768px) {
-    .sa-fab,
-    .sa-fab-group {
+    .sa-fab:not(.sa-sidebar-fab),
+    .sa-fab-group:not(.sa-sidebar-fab-container) {
         bottom: calc(var(--saw-bottom-nav-height-mobile, 48px) + var(--saw-space-3, 12px));
         right: var(--saw-space-4);
     }
-    
-    /* On mobile with full-width sidebar, move FAB above sidebar header */
-    body:has(.sa-sidebar--active) .sa-fab,
-    body:has(.sa-sidebar--active) .sa-fab-group {
-        /* Position in top-right corner, above sidebar content */
-        bottom: auto !important;
-        top: calc(60px + var(--saw-space-3, 12px)) !important;
-        right: var(--saw-space-4) !important;
-        z-index: 10001 !important;
-    }
 }
 
-/* Secondary a danger varianty pro FAB */
+/* ============================================
+   FAB VARIANTS
+   ============================================ */
+
+/* Secondary variant */
 .sa-fab--secondary {
     background: var(--saw-gray-600);
 }
@@ -112,6 +103,7 @@ body:has(.sa-sidebar--active) .sa-fab-group {
     background: var(--saw-gray-700);
 }
 
+/* Danger variant */
 .sa-fab--danger {
     background: var(--saw-danger, #dc2626);
 }
@@ -120,7 +112,9 @@ body:has(.sa-sidebar--active) .sa-fab-group {
     background: var(--saw-danger-dark, #b91c1c);
 }
 
-/* Loading state for FAB buttons */
+/* ============================================
+   LOADING STATE
+   ============================================ */
 .sa-fab.is-loading {
     pointer-events: none;
     opacity: 0.7;
@@ -137,11 +131,6 @@ body:has(.sa-sidebar--active) .sa-fab-group {
     to {
         transform: rotate(360deg);
     }
-}
-
-/* FAB Group - detail mode styling */
-.sa-fab-group[data-sidebar-mode="detail"] {
-    /* Positioned in the table panel, not in sidebar */
 }
 
 /* All FABs in group should have consistent size */

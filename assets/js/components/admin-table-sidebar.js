@@ -32,8 +32,8 @@
         $(document).off('click.saw-sidebar-delete');
         
         // Use event delegation for dynamically loaded content
-        // Handles: FAB group delete button, sidebar floating actions, and old delete button classes
-        $(document).on('click.saw-sidebar-delete', '.saw-floating-action-btn.delete, .saw-sidebar-floating-actions .saw-delete-btn, .sa-fab-group .saw-delete-btn, .sa-sidebar-footer .sa-delete-btn', function(e) {
+        // Handles: New sidebar FAB delete button, FAB group delete button, sidebar floating actions, and old delete button classes
+        $(document).on('click.saw-sidebar-delete', '.sa-sidebar-fab--delete, .saw-floating-action-btn.delete, .saw-sidebar-floating-actions .saw-delete-btn, .sa-fab-group .saw-delete-btn, .sa-sidebar-footer .sa-delete-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -181,6 +181,47 @@
     }
 
     // ========================================
+    // SAVE FAB BUTTON HANDLER
+    // ========================================
+    
+    /**
+     * Initialize save FAB button loading state
+     * 
+     * Adds loading spinner to save FAB when form is submitted.
+     * 
+     * @since 6.1.0
+     */
+    function initSaveFabButton() {
+        console.log('[SAW Sidebar] Initializing save FAB button handler');
+        
+        // Remove existing handlers
+        $(document).off('click.saw-sidebar-save');
+        
+        // Add loading state on save FAB click
+        $(document).on('click.saw-sidebar-save', '.sa-sidebar-fab--save', function(e) {
+            const $btn = $(this);
+            const formId = $btn.attr('form');
+            const $form = $('#' + formId);
+            
+            // Check if form is valid (HTML5 validation)
+            if ($form.length && $form[0].checkValidity && !$form[0].checkValidity()) {
+                // Form invalid - browser will show validation messages
+                return;
+            }
+            
+            // Add loading state
+            $btn.addClass('is-loading');
+            
+            // Remove loading after timeout (fallback if form submission fails)
+            setTimeout(function() {
+                $btn.removeClass('is-loading');
+            }, 10000);
+        });
+        
+        console.log('[SAW Sidebar] Save FAB button handler initialized');
+    }
+
+    // ========================================
     // RELATED ITEMS NAVIGATION
     // ========================================
     
@@ -225,6 +266,7 @@
      */
     function init() {
         initDeleteButton();
+        initSaveFabButton();
         initRelatedItems();
         console.log('[SAW Sidebar] All handlers initialized');
     }
@@ -244,6 +286,7 @@
     window.SAWSidebar = {
         init: init,
         initDeleteButton: initDeleteButton,
+        initSaveFabButton: initSaveFabButton,
         initRelatedItems: initRelatedItems
     };
 

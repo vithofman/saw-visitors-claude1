@@ -26,4 +26,9 @@
     justify-content: flex-end;
 }
 
+/* Hide footer in form mode (using FAB save button instead) */
+.sa-sidebar[data-mode="edit"] .sa-sidebar-footer,
+.sa-sidebar[data-mode="create"] .sa-sidebar-footer {
+    display: none !important;
+}
 

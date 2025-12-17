@@ -992,17 +992,19 @@ $form_action = $is_edit
             </div>
         </details>
         
+        <?php 
+        // Form actions - only show outside sidebar (sidebar uses FAB save button)
+        if (!$in_sidebar): 
+        ?>
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 <?php echo $is_edit ? $tr('btn_save_changes', 'Uložit změny') : $tr('btn_create_visit', 'Vytvořit návštěvu'); ?>
             </button>
-            
-            <?php if (!$in_sidebar): ?>
-                <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="saw-button saw-button-secondary">
-                    <?php echo $tr('btn_cancel', 'Zrušit'); ?>
-                </a>
-            <?php endif; ?>
+            <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="saw-button saw-button-secondary">
+                <?php echo $tr('btn_cancel', 'Zrušit'); ?>
+            </a>
         </div>
+        <?php endif; ?>
         
         </div>
         <!-- ================================================

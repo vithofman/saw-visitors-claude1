@@ -684,6 +684,11 @@ $js_translations = array(
         </details>
         
         <!-- Tlačítka -->
+        <?php 
+        // Form actions - only show outside sidebar (sidebar uses FAB save button)
+        $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
+        if (!$in_sidebar): 
+        ?>
         <div class="saw-form-actions">
             <button type="submit" class="saw-btn saw-btn-primary">
                 <?php if (class_exists('SAW_Icons')): ?>
@@ -699,6 +704,7 @@ $js_translations = array(
                 <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
             </a>
         </div>
+        <?php endif; ?>
     </form>
 </div>
 

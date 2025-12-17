@@ -228,6 +228,11 @@ $form_action = $is_edit
         <!-- ============================================
              FORM ACTIONS
              ============================================ -->
+        <?php 
+        // Form actions - only show outside sidebar (sidebar uses FAB save button)
+        $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
+        if (!$in_sidebar): 
+        ?>
         <div class="saw-form-actions">
             <button type="submit" class="saw-btn saw-btn-primary">
                 <span class="saw-btn-icon">💾</span>
@@ -239,6 +244,7 @@ $form_action = $is_edit
                 <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
             </a>
         </div>
+        <?php endif; ?>
         
     </form>
 </div>

@@ -71,3 +71,187 @@
     opacity: 0.7;
     pointer-events: none;
 }
+
+/* ============================================
+   SIDEBAR FAB CONTAINER (inside sidebar)
+   For detail mode - edit/delete buttons
+   ============================================ */
+.sa-sidebar-fab-container {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100;
+}
+
+.sa-sidebar-fab {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+}
+
+.sa-sidebar-fab svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Edit button - brand blue */
+.sa-sidebar-fab--edit {
+    background: var(--saw-brand-600, #005A8C);
+    color: #ffffff;
+}
+
+.sa-sidebar-fab--edit:hover {
+    background: var(--saw-brand-700, #004466);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 90, 140, 0.3);
+}
+
+/* Delete button - danger red */
+.sa-sidebar-fab--delete {
+    background: var(--saw-danger, #dc2626);
+    color: #ffffff;
+}
+
+.sa-sidebar-fab--delete:hover {
+    background: var(--saw-danger-dark, #b91c1c);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+}
+
+/* Loading state */
+.sa-sidebar-fab.is-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* Responsive - tablet */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .sa-sidebar-fab-container {
+        right: 12px;
+        bottom: 80px; /* Above bottom-nav */
+    }
+    
+    .sa-sidebar-fab {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .sa-sidebar-fab svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Responsive - mobile */
+@media (max-width: 768px) {
+    .sa-sidebar-fab-container {
+        right: 12px;
+        bottom: 70px; /* Above bottom-nav */
+    }
+    
+    .sa-sidebar-fab {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* ============================================
+   SIDEBAR FAB - FORM MODE (Save button)
+   ============================================ */
+.sa-sidebar-fab-container--form {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100;
+}
+
+/* Save button - green/success color */
+.sa-sidebar-fab--save {
+    background: var(--saw-success, #10b981);
+    color: #ffffff;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.sa-sidebar-fab--save:hover {
+    background: var(--saw-success-dark, #059669);
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.sa-sidebar-fab--save:active {
+    transform: scale(1.05);
+}
+
+.sa-sidebar-fab--save svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Loading state for save */
+.sa-sidebar-fab--save.is-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.sa-sidebar-fab--save.is-loading svg {
+    animation: saw-fab-spin 1s linear infinite;
+}
+
+@keyframes saw-fab-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive - tablet */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .sa-sidebar-fab-container--form {
+        right: 12px;
+        bottom: 80px; /* Above bottom-nav */
+    }
+    
+    .sa-sidebar-fab--save {
+        width: 52px;
+        height: 52px;
+    }
+    
+    .sa-sidebar-fab--save svg {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+/* Responsive - mobile */
+@media (max-width: 768px) {
+    .sa-sidebar-fab-container--form {
+        right: 12px;
+        bottom: 70px; /* Above bottom-nav */
+    }
+    
+    .sa-sidebar-fab--save {
+        width: 52px;
+        height: 52px;
+    }
+}

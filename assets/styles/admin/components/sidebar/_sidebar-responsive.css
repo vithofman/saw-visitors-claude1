@@ -12,9 +12,9 @@
    ============================================ */
 @media (max-width: 1024px) and (min-width: 769px) {
     .sa-sidebar {
-        /* Narrower width on tablet - approximately 67% of desktop (480px vs 720px) */
-        width: 480px !important;
-        max-width: calc(100% - 60px) !important;
+        /* Tablet width: 360px (zúženo o 25% z původních 480px) */
+        width: 360px !important;
+        max-width: calc(100% - 40px) !important;
         height: calc(100vh - var(--saw-bottom-nav-height, 52px)) !important;
         height: calc(100dvh - var(--saw-bottom-nav-height, 52px)) !important;
         bottom: var(--saw-bottom-nav-height, 52px) !important;
@@ -22,8 +22,9 @@
     }
     
     .sa-sidebar--nested {
-        width: 440px !important;
-        max-width: calc(100% - 80px) !important;
+        /* Nested tablet width: 330px (zúženo o 25% z původních 440px) */
+        width: 330px !important;
+        max-width: calc(100% - 60px) !important;
     }
     
     .sa-sidebar-header {

@@ -2308,159 +2308,21 @@
 }
 
 /* ============================================
-   FLOATING ACTION BUTTONS (IN SIDEBAR) - PROFESSIONAL REDESIGN
+   FLOATING ACTION BUTTONS - DEPRECATED
+   FAB buttons for detail sidebar are now in:
+   - CSS: _sidebar-wrapper.css (.sa-sidebar-fab-container)
+   - PHP: detail-sidebar.php
+   
+   This section kept for backwards compatibility only.
    ============================================ */
 
+/* Legacy support - redirect old classes to hidden */
 .saw-sidebar-floating-actions {
-    position: fixed;
-    right: 28px;
-    bottom: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    z-index: 100000;
-}
-
-.saw-floating-action-btn {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 
-                0 2px 4px rgba(0, 0, 0, 0.08);
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    text-decoration: none;
-    border: none;
-    font-size: 0;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Edit Button - Brand Blue */
-.saw-floating-action-btn.edit {
-    background: var(--saw-brand-600, #005A8C);
-    color: #ffffff;
-}
-
-.saw-floating-action-btn.edit::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
-    opacity: 0;
-    transition: opacity 0.25s ease;
-}
-
-.saw-floating-action-btn.edit:hover {
-    background: var(--saw-brand-700, #004466);
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 8px 24px rgba(0, 90, 140, 0.25), 
-                0 4px 8px rgba(0, 90, 140, 0.15);
-}
-
-.saw-floating-action-btn.edit:hover::before {
-    opacity: 1;
-}
-
-.saw-floating-action-btn.edit:active {
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 4px 12px rgba(0, 90, 140, 0.2);
-}
-
-/* Delete Button - Danger Red */
-.saw-floating-action-btn.delete {
-    background: var(--saw-danger, #dc2626);
-    color: #ffffff;
-}
-
-.saw-floating-action-btn.delete::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
-    opacity: 0;
-    transition: opacity 0.25s ease;
-}
-
-.saw-floating-action-btn.delete:hover {
-    background: var(--saw-danger-hover, #b91c1c);
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.25), 
-                0 4px 8px rgba(220, 38, 38, 0.15);
-}
-
-.saw-floating-action-btn.delete:hover::before {
-    opacity: 1;
-}
-
-.saw-floating-action-btn.delete:active {
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-}
-
-/* Icon Styling - White for Maximum Contrast */
-.saw-floating-action-btn .saw-icon {
-    color: #ffffff !important;
-    width: 24px;
-    height: 24px;
-    position: relative;
-    z-index: 1;
-}
-
-.saw-floating-action-btn .saw-icon svg {
-    stroke: #ffffff;
-    stroke-width: 2.5;
-}
-
-/* Legacy Dashicons Support */
-.saw-floating-action-btn .dashicons {
-    font-family: dashicons !important;
-    width: 24px;
-    height: 24px;
-    font-size: 24px;
-    line-height: 1;
-    display: inline-block;
-    color: #ffffff !important;
-    speak: none;
-    position: relative;
-    z-index: 1;
-    font-style: normal;
-    font-weight: normal;
-    font-variant: normal;
-    text-transform: none;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    display: none !important;
 }
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    .saw-sidebar-floating-actions {
-        right: 20px;
-        bottom: 20px;
-        gap: 12px;
-    }
-    
-    .saw-floating-action-btn {
-        width: 52px;
-        height: 52px;
-    }
-    
-    .saw-floating-action-btn .saw-icon,
-    .saw-floating-action-btn .dashicons {
-        width: 22px;
-        height: 22px;
-        font-size: 22px;
-    }
-    
     .saw-detail-header {
         padding: 20px;
         gap: 16px;
@@ -2774,13 +2636,24 @@
 /* Responsive sidebar width adjustments */
 @media (max-width: 1400px) {
     .saw-admin-table-split .saw-sidebar-wrapper {
-        width: 680px !important; /* Scaled from 720px */
+        width: 600px !important; /* Zúženo */
     }
 }
 
 @media (max-width: 1200px) {
     .saw-admin-table-split .saw-sidebar-wrapper {
-        width: 640px !important; /* Scaled from 720px */
+        width: 500px !important; /* Zúženo */
+    }
+}
+
+/* Tablet (769-1024px) - nové pravidlo */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .saw-admin-table-split .saw-sidebar-wrapper {
+        width: 375px !important; /* Zúženo o 25% */
+    }
+    
+    .saw-admin-table-split .saw-sidebar-wrapper[data-is-nested="1"] {
+        width: 340px !important;
     }
 }
 

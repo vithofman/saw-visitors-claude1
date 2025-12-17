@@ -348,19 +348,21 @@ $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'
         <!-- ============================================ -->
         <!-- SUBMIT -->
         <!-- ============================================ -->
+        <?php 
+        // Form actions - only show outside sidebar (sidebar uses FAB save button)
+        if (!$in_sidebar): 
+        ?>
         <div class="sa-form-actions">
             <button type="submit" class="sa-btn sa-btn--primary">
                 <?php echo $is_edit 
                     ? esc_html($tr('btn_save', 'Uložit změny')) 
                     : esc_html($tr('btn_create', 'Vytvořit pobočku')); ?>
             </button>
-            
-            <?php if (!$in_sidebar): ?>
-                <a href="<?php echo esc_url(home_url('/admin/branches/')); ?>" class="sa-btn sa-btn--secondary">
-                    <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
-                </a>
-            <?php endif; ?>
+            <a href="<?php echo esc_url(home_url('/admin/branches/')); ?>" class="sa-btn sa-btn--secondary">
+                <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
+            </a>
         </div>
+        <?php endif; ?>
         
     </form>
 </div>

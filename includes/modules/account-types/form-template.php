@@ -231,17 +231,19 @@ if (!empty($item['features'])) {
         </details>
         
         <!-- ACTIONS -->
+        <?php 
+        // Form actions - only show outside sidebar (sidebar uses FAB save button)
+        if (!$in_sidebar): 
+        ?>
         <div class="saw-form-actions">
             <button type="submit" class="saw-button saw-button-primary">
                 💾 <?php echo $is_edit ? 'Uložit změny' : 'Vytvořit typ účtu'; ?>
             </button>
-            
-            <?php if (!$in_sidebar): ?>
-                <a href="<?php echo esc_url(home_url('/admin/account-types/')); ?>" class="saw-button saw-button-secondary">
-                    Zrušit
-                </a>
-            <?php endif; ?>
+            <a href="<?php echo esc_url(home_url('/admin/account-types/')); ?>" class="saw-button saw-button-secondary">
+                Zrušit
+            </a>
         </div>
+        <?php endif; ?>
         
     </form>
 </div>
