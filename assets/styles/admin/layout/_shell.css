@@ -1,19 +1,24 @@
 /**
  * SAW Admin - App Shell Layout
  * @package SAW_Visitors
- * @version 9.0.0 - FIXED: Complete height chain for CSS Sticky
- * 
- * KLÍČOVÝ PRINCIP PRO STICKY:
- * ===========================
- * CSS sticky funguje správně pouze když:
- * 1. CELÝ height chain je správně nastaven (html → body → ... → scroll)
- * 2. Scroll container má overflow: auto
- * 3. Všechny parent elementy mají overflow: hidden (ne visible!)
- * 4. Všechny parent elementy mají min-height: 0 (pro flex shrink)
+ * @version 11.0.0
  */
 
 /* ============================================
-   HTML & BODY - KRITICKÉ PRO HEIGHT CHAIN
+   CSS VARIABLES
+   ============================================ */
+:root {
+    --saw-header-height: 60px;
+    --saw-header-height-tablet: 56px;
+    --saw-header-height-mobile: 52px;
+    --saw-footer-height: 45px;
+    --saw-bottom-nav-height: 64px;
+    --saw-bottom-nav-height-mobile: 58px;
+    --saw-sidebar-width: 260px;
+}
+
+/* ============================================
+   HTML & BODY
    ============================================ */
 html {
     height: 100% !important;
@@ -24,16 +29,27 @@ body {
     height: 100% !important;
     overflow: hidden !important;
     margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* ============================================
-   APP BODY
+   APP BODY - CSS GRID LAYOUT
    ============================================ */
 .sa-app-body,
 .saw-app-body {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    
+    display: grid !important;
+    grid-template-rows: var(--saw-header-height) 1fr var(--saw-footer-height) !important;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer" !important;
+    
     min-height: 0 !important;
     overflow: hidden !important;
     background: var(--saw-bg-primary, #ffffff);
@@ -44,17 +60,32 @@ body {
 }
 
 /* ============================================
-   CONTAINER
+   HEADER - GRID AREA
+   ============================================ */
+.sa-app-header {
+    grid-area: header !important;
+}
+
+/* ============================================
+   CONTAINER - GRID AREA MAIN
    ============================================ */
 .sa-app-container,
 .saw-app-container {
-    flex: 1 !important;
+    grid-area: main !important;
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
     overflow: hidden !important;
-    padding-top: 60px; /* Must match header height (60px on desktop) */
-    padding-bottom: 45px;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* ============================================
+   FOOTER - GRID AREA
+   ============================================ */
+.sa-app-footer,
+.saw-app-footer {
+    grid-area: footer !important;
 }
 
 /* ============================================
@@ -68,16 +99,9 @@ body {
     min-width: 0 !important;
     min-height: 0 !important;
     overflow: hidden !important;
-    padding-bottom: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     background: var(--saw-bg-primary, #ffffff);
-}
-
-/* Desktop: offset pro sidebar */
-@media (min-width: 1025px) {
-    .sa-app-main,
-    .saw-app-main {
-        margin-left: 260px !important;
-    }
 }
 
 /* ============================================
@@ -90,16 +114,16 @@ body {
     flex-direction: column !important;
     min-height: 0 !important;
     overflow: hidden !important;
-    padding: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     width: 100%;
     box-sizing: border-box;
     max-width: 100%;
-    margin: 0 auto;
     background: var(--saw-bg-primary, #ffffff);
 }
 
 /* ============================================
-   MODULE WRAPPER - KRITICKÉ PRO STICKY!
+   MODULE WRAPPER
    ============================================ */
 [class^="saw-module-"],
 [class*=" saw-module-"] {
@@ -109,41 +133,78 @@ body {
     height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 /* ============================================
-   MOBILE RESPONSIVE
+   TABLE PANEL
+   ============================================ */
+.sa-table-panel {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* ============================================
+   DESKTOP
+   ============================================ */
+@media (min-width: 1025px) {
+    .sa-app-body,
+    .saw-app-body {
+        grid-template-rows: var(--saw-header-height) 1fr var(--saw-footer-height) !important;
+    }
+    
+    .sa-app-main,
+    .saw-app-main {
+        margin-left: var(--saw-sidebar-width) !important;
+    }
+    
+    .sa-bottom-nav {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   TABLET
    ============================================ */
 @media (max-width: 1024px) {
-    .sa-app-container,
-    .saw-app-container {
-        padding-top: 60px; /* Header is 60px on tablet */
-        padding-bottom: 0;
+    .sa-app-body,
+    .saw-app-body {
+        grid-template-rows: var(--saw-header-height-tablet) 1fr var(--saw-bottom-nav-height) !important;
     }
-
+    
     .sa-app-main,
     .saw-app-main {
         margin-left: 0 !important;
     }
 }
 
+/* ============================================
+   MOBILE
+   ============================================ */
 @media (max-width: 768px) {
-    .sa-app-container,
-    .saw-app-container {
-        padding-top: 56px; /* Header is 56px on mobile */
-        padding-bottom: 0;
-    }
-
-    .sa-app-content,
-    .saw-app-content {
-        padding: 0;
+    .sa-app-body,
+    .saw-app-body {
+        grid-template-rows: var(--saw-header-height-mobile) 1fr var(--saw-bottom-nav-height-mobile) !important;
     }
 }
 
+/* ============================================
+   SMALL MOBILE
+   ============================================ */
 @media (max-width: 480px) {
-    .sa-app-container,
-    .saw-app-container {
-        padding-top: 52px; /* Header is 52px on small mobile */
-        padding-bottom: 0;
+    .sa-app-body,
+    .saw-app-body {
+        grid-template-rows: var(--saw-header-height-mobile) 1fr var(--saw-bottom-nav-height-mobile) !important;
+    }
+}
+
+/* ============================================
+   PWA STANDALONE
+   ============================================ */
+@media (display-mode: standalone) {
+    .sa-app-body,
+    .saw-app-body {
+        padding-top: env(safe-area-inset-top, 0px);
     }
 }

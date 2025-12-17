@@ -1,62 +1,36 @@
 /**
- * SAW Admin - App Header (Fixed Top Bar)
+ * SAW Admin - App Header
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 4.0.0
  */
 
 /* ============================================
    HEADER CONTAINER
    ============================================ */
-
 .sa-app-header {
-    position: fixed;
-    top: 0;
-    left: 0; /* Full width */
-    right: 0;
-    height: 60px;
-    z-index: 1000;
-    flex-shrink: 0;
-    
-    /* Elegant gradient background - matching sidebar */
-    background: linear-gradient(
-        90deg,
-        #0a2540 0%,           /* Very dark navy at left */
-        #0d3a5c 50%,          /* Transition */
-        #005A8C 100%          /* Brand blue at right */
-    );
-    
-    /* Subtle pattern overlay for depth */
-    background-image: 
-        linear-gradient(
-            90deg,
-            #0a2540 0%,
-            #0d3a5c 50%,
-            #005A8C 100%
-        ),
-        repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 2px,
-            rgba(255, 255, 255, 0.01) 2px,
-            rgba(255, 255, 255, 0.01) 4px
-        );
-    
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    height: 100%;
     padding: 0 15px;
+    z-index: 1000;
+    
+    background: linear-gradient(
+        90deg,
+        #0a2540 0%,
+        #0d3a5c 50%,
+        #005A8C 100%
+    );
+    
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 
         0 2px 8px rgba(0, 0, 0, 0.15),
         0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: left var(--saw-transition-base); /* Smooth transition when sidebar collapses */
 }
 
 /* ============================================
-   HEADER LEFT (Mobile menu + App logo)
+   HEADER LEFT
    ============================================ */
-
 .sa-header-left {
     display: flex;
     align-items: center;
@@ -65,24 +39,23 @@
     min-width: 0;
 }
 
-/* App Logo - REMOVED - no longer used */
 .sa-app-logo {
     display: none !important;
 }
 
-/* Page Title - Premium Glow Effect */
+/* ============================================
+   PAGE TITLE
+   ============================================ */
 .sa-page-title {
     margin: 0;
     padding: 0 var(--saw-space-4, 16px);
     
-    /* PREMIUM TYPOGRAPHY */
     font-family: var(--saw-font-heading, 'Oswald', system-ui, sans-serif);
     font-size: 1.35rem;
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     
-    /* Gradient text effect */
     background: linear-gradient(
         135deg,
         #ffffff 0%,
@@ -93,41 +66,26 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     
-    /* Glow effect */
     filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.4))
             drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
     
-    /* Subtle animation on hover */
     transition: filter 0.3s ease, transform 0.3s ease;
     
-    /* Prevent wrapping */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex-shrink: 0;
 }
 
-/* Hover enhancement */
 .sa-page-title:hover {
     filter: drop-shadow(0 0 12px rgba(125, 211, 252, 0.6))
             drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
     transform: translateY(-1px);
 }
 
-@media (max-width: 768px) {
-    .sa-page-title {
-        font-size: 1.1rem;
-        letter-spacing: 0.12em;
-        padding: 0 var(--saw-space-2, 8px);
-        filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.3))
-                drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
-    }
-    
-    .sa-page-title:hover {
-        transform: none;
-    }
-}
-
+/* ============================================
+   MOBILE MENU TOGGLE
+   ============================================ */
 .sa-mobile-menu-toggle {
     display: none;
     align-items: center;
@@ -160,33 +118,32 @@
 }
 
 /* ============================================
-   HEADER RIGHT (Language + Notifications + User)
+   HEADER RIGHT
    ============================================ */
-
 .sa-header-right {
     display: flex;
     align-items: center;
     gap: var(--saw-space-2);
     flex-shrink: 0;
     margin-right: 0;
-    padding-right: 0px !important;
+    padding-right: 0 !important;
 }
 
 /* ============================================
-   RESPONSIVE HEADER
+   RESPONSIVE - TABLET
    ============================================ */
-
 @media (max-width: 1024px) {
     .sa-app-header {
-        left: 0; /* Already full width */
+        padding: 0 var(--saw-space-3);
     }
 }
 
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
 @media (max-width: 768px) {
     .sa-app-header {
         padding: 0 var(--saw-space-3);
-        height: 56px;
-        left: 0; /* On mobile, header starts from left */
     }
     
     .sa-header-left {
@@ -200,12 +157,22 @@
         flex-shrink: 0;
     }
     
-    /* Hide customer switcher info on mobile */
+    .sa-page-title {
+        font-size: 1.1rem;
+        letter-spacing: 0.12em;
+        padding: 0 var(--saw-space-2, 8px);
+        filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.3))
+                drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
+    }
+    
+    .sa-page-title:hover {
+        transform: none;
+    }
+    
     .sa-switcher-info {
         display: none;
     }
     
-    /* User menu - only avatar on mobile */
     .sa-user-menu-toggle {
         padding: 6px;
         gap: 0;
@@ -224,7 +191,6 @@
         height: 36px;
     }
     
-    /* Language switcher - only flag on mobile */
     .sa-language-code {
         display: none;
     }
@@ -235,18 +201,18 @@
         justify-content: center;
     }
     
-    /* Notifications - smaller on mobile */
     .sa-notifications-toggle {
         width: 36px;
         height: 36px;
     }
 }
 
+/* ============================================
+   RESPONSIVE - SMALL MOBILE
+   ============================================ */
 @media (max-width: 480px) {
     .sa-app-header {
         padding: 0 var(--saw-space-2);
-        height: 52px;
-        left: 0; /* On mobile, header starts from left */
     }
     
     .sa-header-left {
@@ -262,7 +228,6 @@
 /* ============================================
    USER MENU
    ============================================ */
-
 .sa-user-menu {
     position: relative;
 }
@@ -350,7 +315,9 @@
     transform: rotate(180deg);
 }
 
-/* User Dropdown */
+/* ============================================
+   USER DROPDOWN
+   ============================================ */
 .sa-user-dropdown {
     position: absolute;
     top: calc(100% + 8px);
@@ -495,9 +462,8 @@
 }
 
 /* ============================================
-   NOTIFICATIONS (v headeru)
+   NOTIFICATIONS
    ============================================ */
-
 .sa-notifications {
     position: relative;
     display: flex;
@@ -559,7 +525,7 @@
 
 .sa-notifications-dropdown {
     position: fixed;
-    top: 68px;
+    top: calc(var(--saw-header-height, 60px) + 8px);
     right: 80px;
     width: 380px;
     max-height: 520px;
@@ -686,4 +652,3 @@
     font-size: var(--saw-text-xs);
     color: rgba(255, 255, 255, 0.5);
 }
-
