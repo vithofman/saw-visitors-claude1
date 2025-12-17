@@ -1,10 +1,28 @@
 /**
  * SAW Admin - Mobile Bottom Navigation
  * @package SAW_Visitors
- * @version 3.0.0
+ * @version 3.1.0 - FIXED: Complete styles with proper desktop hiding
+ * 
+ * CHANGELOG v3.1.0:
+ * - Fixed: Desktop hiding at min-width: 1025px (was causing 180px gap in table layout)
+ * - Fixed: Complete styles for sa-bottom-nav component
+ * - Fixed: Tablet and mobile responsive styles
  */
 
-@media (max-width: 768px) {
+/* ============================================
+   DESKTOP - HIDE BOTTOM NAV (CRITICAL!)
+   This prevents 180px gap in document flow
+   ============================================ */
+@media (min-width: 1025px) {
+    .sa-bottom-nav {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   TABLET & MOBILE - SHOW BOTTOM NAV
+   ============================================ */
+@media (max-width: 1024px) {
     .sa-bottom-nav {
         position: fixed;
         bottom: 0;
@@ -12,40 +30,161 @@
         right: 0;
         display: flex;
         align-items: center;
+        justify-content: center;
+        height: 64px;
+        padding: var(--saw-space-2, 8px);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        background: var(--saw-bg-primary, #ffffff);
+        border-top: 1px solid var(--saw-border-color, #e2e8f0);
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+        z-index: 1000;
+        
+        /* GPU acceleration */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        
+        /* Prevent content selection */
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    .sa-bottom-nav-inner {
+        display: flex;
+        align-items: stretch;
         justify-content: space-around;
-        padding: var(--saw-space-2);
-        background: var(--saw-bg-primary);
-        border-top: 1px solid var(--saw-border-color);
-        z-index: var(--saw-z-fixed);
+        height: 100%;
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 0 8px;
     }
     
     .sa-bottom-nav-item {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--saw-space-1);
-        padding: var(--saw-space-2);
-        font-size: var(--saw-text-xs);
-        color: var(--saw-text-secondary);
+        justify-content: center;
+        flex: 1;
+        min-width: 0;
+        padding: 8px 4px;
         text-decoration: none;
-        border-radius: var(--saw-radius-md);
-        transition: all var(--saw-transition-fast);
+        color: var(--saw-text-secondary, #64748b);
+        background: transparent;
+        border: none;
+        border-radius: var(--saw-radius-md, 6px);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        margin: 6px 2px;
+        min-height: 44px;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .sa-bottom-nav-item:hover {
+        background: var(--saw-bg-secondary, #f1f5f9);
+        color: var(--saw-text-primary, #0f172a);
     }
     
     .sa-bottom-nav-item--active {
-        color: var(--saw-brand-600);
+        color: var(--saw-brand-600, #2563eb);
+        background: var(--saw-brand-50, #eff6ff);
+    }
+    
+    /* Active indicator - top bar */
+    .sa-bottom-nav-item--active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 3px;
+        background: var(--saw-brand-600, #2563eb);
+        border-radius: 0 0 3px 3px;
     }
     
     .sa-bottom-nav-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 24px;
         height: 24px;
+        margin-bottom: 2px;
+    }
+    
+    .sa-bottom-nav-icon svg {
+        width: 22px;
+        height: 22px;
+        stroke: currentColor;
+        stroke-width: 2;
+    }
+    
+    .sa-bottom-nav-label {
+        font-size: 11px;
+        font-weight: var(--saw-font-medium, 500);
+        line-height: 1.2;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    
+    /* Hide desktop footer when bottom nav is visible */
+    .sa-app-footer {
+        display: none !important;
+    }
+    
+    /* Adjust sidebar to account for bottom nav */
+    .sa-sidebar-wrapper {
+        bottom: calc(64px + env(safe-area-inset-bottom, 0)) !important;
+    }
+    
+    /* Adjust FAB button position */
+    .sa-fab,
+    .sa-floating-btn {
+        bottom: calc(64px + 20px + env(safe-area-inset-bottom, 0)) !important;
     }
 }
 
-@media (min-width: 769px) {
+/* ============================================
+   MOBILE - SMALLER BOTTOM NAV
+   ============================================ */
+@media (max-width: 768px) {
     .sa-bottom-nav {
-        display: none;
+        height: 58px;
+    }
+    
+    .sa-bottom-nav-item {
+        padding: 6px 4px;
+        margin: 4px 2px;
+    }
+    
+    .sa-bottom-nav-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .sa-bottom-nav-label {
+        font-size: 10px;
     }
 }
 
-
+/* ============================================
+   VERY SMALL MOBILE
+   ============================================ */
+@media (max-width: 380px) {
+    .sa-bottom-nav-inner {
+        padding: 0 4px;
+    }
+    
+    .sa-bottom-nav-item {
+        padding: 4px 2px;
+        margin: 4px 1px;
+    }
+    
+    .sa-bottom-nav-label {
+        font-size: 9px;
+    }
+}

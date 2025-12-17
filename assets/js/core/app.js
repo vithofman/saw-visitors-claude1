@@ -58,14 +58,130 @@
     // SIDEBAR ACCORDION NAVIGATION
     // ========================================
     
+    // Default open sections (matches PHP config)
+    var DEFAULT_OPEN_SECTIONS = ['visits'];
+    
     function initSidebarAccordion() {
-        $(document).on('click', '.sa-nav-heading[data-section-toggle]', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        // Use vanilla JS with capture phase to ensure we catch the event
+        // before any stopPropagation can block it
+        
+        // Remove old handlers if exist
+        if (window._sawSidebarAccordionHandler) {
+            document.removeEventListener('click', window._sawSidebarAccordionHandler, true);
+        }
+        if (window._sawSidebarNavHandler) {
+            document.removeEventListener('click', window._sawSidebarNavHandler, true);
+        }
+        
+        // Get current active section from DOM
+        var activeSection = getActiveSectionFromDOM();
+        
+        // Create handler for section toggle
+        window._sawSidebarAccordionHandler = function(e) {
+            var heading = e.target.closest('.sa-nav-heading[data-section-toggle]');
             
-            var $section = $(this).closest('.sa-nav-section');
-            $section.toggleClass('sa-nav-section--collapsed');
-        });
+            if (heading) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var section = heading.closest('.sa-nav-section');
+                if (section) {
+                    var sectionId = section.getAttribute('data-section-id');
+                    var isCollapsed = section.classList.toggle('sa-nav-section--collapsed');
+                    
+                    // Save state to sessionStorage
+                    saveSectionState(sectionId, !isCollapsed);
+                    
+                    console.log('[SAW Sidebar] Section toggled:', sectionId, isCollapsed ? 'collapsed' : 'expanded');
+                }
+            }
+        };
+        
+        // Create handler for nav item clicks - collapse other sections
+        window._sawSidebarNavHandler = function(e) {
+            var navItem = e.target.closest('.sa-nav-item[data-section]');
+            
+            if (navItem) {
+                var clickedSection = navItem.getAttribute('data-section');
+                
+                // Collapse all OTHER sections (except clicked one and default open)
+                document.querySelectorAll('.sa-nav-section[data-section-id]').forEach(function(section) {
+                    var sectionId = section.getAttribute('data-section-id');
+                    
+                    if (sectionId !== clickedSection) {
+                        // Collapse if not in default open list
+                        if (DEFAULT_OPEN_SECTIONS.indexOf(sectionId) === -1) {
+                            section.classList.add('sa-nav-section--collapsed');
+                            saveSectionState(sectionId, false);
+                        }
+                    } else {
+                        // Keep clicked section open
+                        section.classList.remove('sa-nav-section--collapsed');
+                        saveSectionState(sectionId, true);
+                    }
+                });
+                
+                console.log('[SAW Sidebar] Navigated to section:', clickedSection);
+            }
+        };
+        
+        // Add handlers with capture phase (true)
+        document.addEventListener('click', window._sawSidebarAccordionHandler, true);
+        document.addEventListener('click', window._sawSidebarNavHandler, true);
+        
+        // Restore section states from sessionStorage (overrides PHP defaults)
+        restoreSectionStates();
+        
+        console.log('[SAW Sidebar] Accordion initialized, active section:', activeSection);
+    }
+    
+    // Get the section that contains the active menu item
+    function getActiveSectionFromDOM() {
+        var activeItem = document.querySelector('.sa-nav-item--active[data-section]');
+        return activeItem ? activeItem.getAttribute('data-section') : null;
+    }
+    
+    // Save section state to sessionStorage
+    function saveSectionState(sectionId, isOpen) {
+        if (!sectionId) return;
+        try {
+            var states = JSON.parse(sessionStorage.getItem('sawSidebarSections') || '{}');
+            states[sectionId] = isOpen;
+            sessionStorage.setItem('sawSidebarSections', JSON.stringify(states));
+        } catch (e) {
+            console.warn('[SAW Sidebar] Could not save section state:', e);
+        }
+    }
+    
+    // Restore section states from sessionStorage
+    function restoreSectionStates() {
+        try {
+            var states = JSON.parse(sessionStorage.getItem('sawSidebarSections') || '{}');
+            var activeSection = getActiveSectionFromDOM();
+            
+            document.querySelectorAll('.sa-nav-section[data-section-id]').forEach(function(section) {
+                var sectionId = section.getAttribute('data-section-id');
+                var hasActive = section.hasAttribute('data-has-active');
+                
+                // Priority:
+                // 1. Section with active item is ALWAYS open
+                // 2. Saved state from sessionStorage
+                // 3. Default (from PHP)
+                
+                if (hasActive) {
+                    section.classList.remove('sa-nav-section--collapsed');
+                } else if (states.hasOwnProperty(sectionId)) {
+                    if (states[sectionId]) {
+                        section.classList.remove('sa-nav-section--collapsed');
+                    } else {
+                        section.classList.add('sa-nav-section--collapsed');
+                    }
+                }
+                // Otherwise keep PHP default
+            });
+        } catch (e) {
+            console.warn('[SAW Sidebar] Could not restore section states:', e);
+        }
     }
     
     // ========================================

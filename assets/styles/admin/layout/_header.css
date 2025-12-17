@@ -70,24 +70,61 @@
     display: none !important;
 }
 
-/* Page Title */
+/* Page Title - Premium Glow Effect */
 .sa-page-title {
     margin: 0;
-    padding: 0 var(--saw-space-4);
-    font-size: var(--saw-text-xl);
-    font-weight: var(--saw-font-bold);
-    color: rgba(255, 255, 255, 0.95);
+    padding: 0 var(--saw-space-4, 16px);
+    
+    /* PREMIUM TYPOGRAPHY */
+    font-family: var(--saw-font-heading, 'Oswald', system-ui, sans-serif);
+    font-size: 1.35rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    
+    /* Gradient text effect */
+    background: linear-gradient(
+        135deg,
+        #ffffff 0%,
+        #e0f2fe 50%,
+        #7dd3fc 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    
+    /* Glow effect */
+    filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.4))
+            drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    
+    /* Subtle animation on hover */
+    transition: filter 0.3s ease, transform 0.3s ease;
+    
+    /* Prevent wrapping */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex-shrink: 0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover enhancement */
+.sa-page-title:hover {
+    filter: drop-shadow(0 0 12px rgba(125, 211, 252, 0.6))
+            drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+    transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
     .sa-page-title {
-        font-size: var(--saw-text-lg);
-        padding: 0 var(--saw-space-2);
+        font-size: 1.1rem;
+        letter-spacing: 0.12em;
+        padding: 0 var(--saw-space-2, 8px);
+        filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.3))
+                drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
+    }
+    
+    .sa-page-title:hover {
+        transform: none;
     }
 }
 

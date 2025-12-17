@@ -85,14 +85,31 @@ $is_nested = isset($GLOBALS['saw_nested_inline_create']) && $GLOBALS['saw_nested
                     echo esc_html($config['icon'] ?? '📝');
                 }
             ?></span>
-            <h2 class="sa-sidebar-heading"><?php echo esc_html($sidebar_title); ?></h2>
+            <div class="sa-sidebar-title-text">
+                <div class="sa-sidebar-module-name"><?php echo esc_html($config['plural'] ?? $config['title'] ?? ucfirst($entity)); ?></div>
+                <h2 class="sa-sidebar-heading"><?php echo esc_html($sidebar_title); ?></h2>
+            </div>
         </div>
-        <a href="<?php echo esc_url($close_url); ?>" class="sa-sidebar-close" title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </a>
+        <div class="sa-sidebar-nav">
+            <?php if ($is_edit && !empty($item['id'])): ?>
+            <button type="button" class="sa-sidebar-nav-btn sa-sidebar-prev" title="Předchozí">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button type="button" class="sa-sidebar-nav-btn sa-sidebar-next" title="Další">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+            <?php endif; ?>
+            <a href="<?php echo esc_url($close_url); ?>" class="sa-sidebar-close" title="<?php echo esc_attr($tr('btn_close', 'Zavřít')); ?>">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </a>
+        </div>
     </div>
     <div class="sa-sidebar-content">
         <?php 

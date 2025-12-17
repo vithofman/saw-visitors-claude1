@@ -1,7 +1,12 @@
 /**
  * SAW Admin - Table Element (<table>, <thead>, <tbody>, <tr>, <td>)
  * @package SAW_Visitors
- * @version 9.0.0 - FIXED: CSS Sticky thead
+ * @version 9.1.0 - FIXED: Thead sticky top position
+ * 
+ * CHANGELOG v9.1.0:
+ * - Fixed: Thead top changed from calc(16px + var) to just var(--saw-toolbar-height)
+ * - Fixed: scroll-margin-top updated accordingly
+ * - Fixed: Removed extra padding-top on first row (no longer needed)
  */
 
 /* ============================================
@@ -32,9 +37,9 @@
     display: table-cell;
     
     /* STICKY POSITIONING */
-    /* toolbar je na top: 16px, takže thead je toolbar offset + toolbar height */
+    /* Toolbar je na top: 0, takže thead je pouze výška toolbaru */
     position: sticky !important;
-    top: calc(16px + var(--saw-toolbar-height, 58px)) !important;
+    top: var(--saw-toolbar-height, 67px) !important;
     z-index: 99 !important;
     
     /* Pozadí - velmi světle modrý pro záhlaví tabulky */
@@ -101,13 +106,14 @@
     display: table-row;
     transition: background var(--saw-transition-fast, 0.15s);
     /* Scroll margin pro správnou viditelnost pod sticky header */
-    scroll-margin-top: calc(16px + var(--saw-toolbar-height, 58px) + 50px);
+    /* Toolbar (67px) + thead (~40px) + malá rezerva */
+    scroll-margin-top: calc(var(--saw-toolbar-height, 67px) + 50px);
 }
 
-/* První řádek - extra horní padding pro jistotu viditelnosti */
+/* První řádek - standardní padding (extra padding již není potřeba) */
 .sa-table-tbody .sa-table-row:first-child .sa-table-cell,
 .sa-table-tbody tr:first-child td {
-    padding-top: 16px;
+    padding-top: 12px;
 }
 
 .sa-table-tbody .sa-table-row:hover {
@@ -211,8 +217,8 @@
 @media (max-width: 768px) {
     .sa-table-thead th,
     .sa-table-th {
-        /* Mobile: toolbar je často vyšší kvůli wrappingu */
-        top: calc(16px + var(--saw-toolbar-height-mobile, var(--saw-toolbar-height, 80px))) !important;
+        /* Mobile: používá mobilní toolbar height proměnnou */
+        top: var(--saw-toolbar-height-mobile, var(--saw-toolbar-height, 80px)) !important;
         padding: 8px var(--saw-space-3, 12px);
         font-size: 0.65rem;
     }
@@ -220,7 +226,7 @@
     /* První řádek na mobilu */
     .sa-table-tbody .sa-table-row:first-child .sa-table-cell,
     .sa-table-tbody tr:first-child td {
-        padding-top: 12px;
+        padding-top: 10px;
     }
     
     .sa-table-cell {

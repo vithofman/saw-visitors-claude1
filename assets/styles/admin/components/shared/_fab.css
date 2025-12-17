@@ -88,4 +88,33 @@ body:has(.sa-sidebar-wrapper.active) .sa-fab-group {
     background: var(--saw-danger-dark, #b91c1c);
 }
 
+/* Loading state for FAB buttons */
+.sa-fab.is-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.sa-fab.is-loading svg {
+    animation: saw-spin 1s linear infinite;
+}
+
+@keyframes saw-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* FAB Group - detail mode styling */
+.sa-fab-group[data-sidebar-mode="detail"] {
+    /* Positioned in the table panel, not in sidebar */
+}
+
+/* All FABs in group should have consistent size */
+.sa-fab-group .sa-fab {
+    width: 56px;
+    height: 56px;
+}
 

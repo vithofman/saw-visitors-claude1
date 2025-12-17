@@ -526,12 +526,12 @@
      * @since 7.0.0
      */
     function initSidebarNavigation() {
-        $(document).on('click', '.saw-sidebar-prev, .saw-sidebar-next', function (e) {
+        $(document).on('click', '.saw-sidebar-prev, .saw-sidebar-next, .sa-sidebar-prev, .sa-sidebar-next', function (e) {
             e.preventDefault();
             e.stopPropagation();
 
             const $button = $(this);
-            const $sidebar = $button.closest('.saw-sidebar');
+            const $sidebar = $button.closest('.saw-sidebar, .sa-sidebar');
             const entity = $sidebar.data('entity');
             const currentId = parseInt($sidebar.data('current-id') || 0);
             const direction = $button.hasClass('saw-sidebar-prev') ? 'prev' : 'next';
@@ -639,7 +639,7 @@
  * @since 7.0.0
  */
     function setActiveRowFromSidebar() {
-        const $sidebar = $('.saw-sidebar[data-current-id]');
+        const $sidebar = $('.saw-sidebar[data-current-id], .sa-sidebar[data-current-id]');
         if (!$sidebar.length) {
             return;
         }
@@ -1890,9 +1890,9 @@
             console.log('✅ Sidebar navigation initialized (event delegation)');
         }
 
-        if ($('.saw-sidebar').length) {
-            console.log('📋 Found', $('.saw-sidebar').length, 'sidebar(s) on page');
-            $('.saw-sidebar').each(function () {
+        if ($('.saw-sidebar, .sa-sidebar').length) {
+            console.log('📋 Found', $('.saw-sidebar, .sa-sidebar').length, 'sidebar(s) on page');
+            $('.saw-sidebar, .sa-sidebar').each(function () {
                 const entity = $(this).data('entity');
                 const currentId = $(this).data('current-id');
                 console.log('  - Sidebar:', { entity, currentId, mode: $(this).data('mode') });

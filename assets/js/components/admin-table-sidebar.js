@@ -32,7 +32,8 @@
         $(document).off('click.saw-sidebar-delete');
         
         // Use event delegation for dynamically loaded content
-        $(document).on('click.saw-sidebar-delete', '.saw-floating-action-btn.delete, .saw-sidebar-floating-actions .saw-delete-btn', function(e) {
+        // Handles: FAB group delete button, sidebar floating actions, and old delete button classes
+        $(document).on('click.saw-sidebar-delete', '.saw-floating-action-btn.delete, .saw-sidebar-floating-actions .saw-delete-btn, .sa-fab-group .saw-delete-btn, .sa-sidebar-footer .sa-delete-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
             

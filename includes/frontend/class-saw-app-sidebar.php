@@ -349,9 +349,6 @@ class SAW_App_Sidebar {
             <?php if ($show_switchers): ?>
                 <!-- Switchers Section - Glassmorphism Container -->
                 <div class="sa-sidebar-switchers">
-                    <span class="sa-sidebar-switchers-label">
-                        <?php echo $this->lang === 'en' ? 'Workspace' : 'Pracovní prostor'; ?>
-                    </span>
                     <?php $this->render_customer_switcher(); ?>
                     <?php $this->render_branch_switcher(); ?>
                 </div>
@@ -359,23 +356,22 @@ class SAW_App_Sidebar {
             
             <nav class="sa-sidebar-nav">
                 <?php 
-                $first_section = true;
-                // Find all sections with headings and their indices
-                $sections_with_heading = array();
-                foreach ($menu as $idx => $sec) {
-                    if (isset($sec['heading'])) {
-                        $sections_with_heading[] = $idx;
-                    }
-                }
-                $last_section_index = !empty($sections_with_heading) ? end($sections_with_heading) : null;
+                $section_index = 0;
+                
+                // Section IDs for tracking (used by JavaScript)
+                $section_ids = array(
+                    'section_visits' => 'visits',
+                    'section_organization' => 'organization',
+                    'section_training' => 'training',
+                    'section_system' => 'system',
+                );
+                
+                // Sections that are open by default (first section without heading is always open)
+                // "NÁVŠTĚVY" (visits) is open by default
+                $default_open_sections = array('visits');
                 
                 foreach ($menu as $index => $section): 
                     $has_active = $this->section_has_active_item($section);
-                    // Last section (settings) should be collapsed by default
-                    $is_collapsed = false;
-                    if (isset($section['heading']) && $index === $last_section_index) {
-                        $is_collapsed = true;
-                    }
                     
                     // Filter items by permissions
                     $visible_items = array();
@@ -391,7 +387,30 @@ class SAW_App_Sidebar {
                     }
                 ?>
                     <?php if (isset($section['heading'])): ?>
-                        <div class="sa-nav-section <?php echo $is_collapsed ? 'sa-nav-section--collapsed' : ''; ?>">
+                        <?php
+                        // Determine section ID from heading translation key
+                        $section_id = '';
+                        foreach ($section_ids as $key => $id) {
+                            if ($section['heading'] === $this->t($key)) {
+                                $section_id = $id;
+                                break;
+                            }
+                        }
+                        
+                        // Determine collapsed state:
+                        // 1. If section contains active item → OPEN
+                        // 2. If section is in default_open_sections → OPEN
+                        // 3. Otherwise → COLLAPSED
+                        $is_collapsed = true;
+                        if ($has_active) {
+                            $is_collapsed = false; // Active section is always open
+                        } elseif (in_array($section_id, $default_open_sections)) {
+                            $is_collapsed = false; // Default open sections
+                        }
+                        ?>
+                        <div class="sa-nav-section <?php echo $is_collapsed ? 'sa-nav-section--collapsed' : ''; ?>" 
+                             data-section-id="<?php echo esc_attr($section_id); ?>"
+                             <?php if ($has_active): ?>data-has-active="1"<?php endif; ?>>
                             <div class="sa-nav-heading" data-section-toggle>
                                 <?php echo esc_html($section['heading']); ?>
                                 <span class="sa-nav-heading-toggle">
@@ -406,6 +425,7 @@ class SAW_App_Sidebar {
                                         href="<?php echo esc_url($item['url']); ?>" 
                                         class="sa-nav-item <?php echo ($this->active_menu === $item['id']) ? 'sa-nav-item--active' : ''; ?>"
                                         data-menu="<?php echo esc_attr($item['id']); ?>"
+                                        data-section="<?php echo esc_attr($section_id); ?>"
                                         <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                                     >
                                         <span class="sa-nav-icon"><?php 
@@ -423,11 +443,13 @@ class SAW_App_Sidebar {
                             </div>
                         </div>
                     <?php else: ?>
+                        <!-- First section without heading (Dashboard, Calendar, Terminal) - always visible -->
                         <?php foreach ($visible_items as $item): ?>
                             <a 
                                 href="<?php echo esc_url($item['url']); ?>" 
                                 class="sa-nav-item <?php echo ($this->active_menu === $item['id']) ? 'sa-nav-item--active' : ''; ?>"
                                 data-menu="<?php echo esc_attr($item['id']); ?>"
+                                data-section="main"
                                 <?php if (!empty($item['target'])): ?>target="<?php echo esc_attr($item['target']); ?>"<?php endif; ?>
                             >
                                 <span class="sa-nav-icon"><?php 
@@ -444,7 +466,7 @@ class SAW_App_Sidebar {
                         <?php endforeach; ?>
                     <?php endif; ?>
                     
-                    <?php $first_section = false; ?>
+                    <?php $section_index++; ?>
                 <?php endforeach; ?>
             </nav>
         </aside>

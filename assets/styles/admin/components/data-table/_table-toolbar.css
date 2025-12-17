@@ -1,7 +1,11 @@
 /**
  * SAW Admin - Table Toolbar (Tabs + Search + Filters)
  * @package SAW_Visitors
- * @version 10.0.0 - FIXED: Search, Filters dropdown, and toolbar spacing
+ * @version 10.1.0 - FIXED: Toolbar top position changed from 16px to 0
+ * 
+ * CHANGELOG v10.1.0:
+ * - Fixed: Toolbar top: 0 instead of 16px (was causing 16px overlap on first row)
+ * - Fixed: Border-radius adjusted for flush top positioning
  */
 
 /* ============================================
@@ -22,9 +26,9 @@
     /* Jemný spodní okraj */
     border-bottom: 1px solid rgba(59, 130, 246, 0.15);
     
-    /* STICKY POSITIONING - top: 16px pro oddělení od headeru i při scrollu */
+    /* STICKY POSITIONING - top: 0 pro správné zarovnání */
     position: sticky !important;
-    top: 16px !important;
+    top: 0 !important;
     z-index: 100 !important;
     
     /* Prevent shrinking in flex */

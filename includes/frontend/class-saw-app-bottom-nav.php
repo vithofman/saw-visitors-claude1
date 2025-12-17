@@ -9,7 +9,12 @@
  * @package    SAW_Visitors
  * @subpackage Frontend
  * @since      5.4.0
- * @version    1.0.0
+ * @version    2.0.0 - FIXED: Changed CSS classes from saw- to sa- prefix
+ * 
+ * CHANGELOG v2.0.0:
+ * - Fixed: All CSS classes now use sa- prefix (sa-bottom-nav, sa-bottom-nav-item, etc.)
+ * - Fixed: Matches styles in assets/styles/admin/layout/_bottom-nav.css
+ * - Fixed: Desktop hiding now works correctly (was causing 180px gap in table layout)
  */
 
 if (!defined('ABSPATH')) {
@@ -257,14 +262,16 @@ class SAW_App_Bottom_Nav {
      * Builds CSS class string for a navigation item.
      *
      * @since 5.4.0
+     * @since 2.0.0 Changed from saw-bottom-nav-item to sa-bottom-nav-item
      * @param array $item Navigation item data
      * @return string CSS classes separated by space
      */
     private function get_item_classes($item) {
-        $classes = array('saw-bottom-nav-item');
+        // FIXED v2.0.0: Changed from saw- to sa- prefix
+        $classes = array('sa-bottom-nav-item');
         
         if ($this->is_active($item['id'])) {
-            $classes[] = 'active';
+            $classes[] = 'sa-bottom-nav-item--active';
         }
         
         /**
@@ -287,6 +294,7 @@ class SAW_App_Bottom_Nav {
      * Includes full accessibility support.
      *
      * @since 5.4.0
+     * @since 2.0.0 Changed CSS classes from saw- to sa- prefix
      * @return void
      */
     public function render() {
@@ -306,12 +314,12 @@ class SAW_App_Bottom_Nav {
         do_action('saw_before_bottom_nav', $items);
         ?>
         <nav 
-            class="saw-bottom-nav" 
-            id="sawBottomNav" 
+            class="sa-bottom-nav" 
+            id="saBottomNav" 
             role="navigation" 
             aria-label="<?php echo esc_attr($this->t('aria_mobile_nav', 'Mobilní navigace', 'Mobile navigation')); ?>"
         >
-            <div class="saw-bottom-nav-inner">
+            <div class="sa-bottom-nav-inner">
                 <?php foreach ($items as $item): ?>
                     <?php $this->render_item($item); ?>
                 <?php endforeach; ?>
@@ -334,6 +342,7 @@ class SAW_App_Bottom_Nav {
      * Outputs HTML for one navigation item with icon and label.
      *
      * @since 5.4.0
+     * @since 2.0.0 Changed CSS classes from saw- to sa- prefix
      * @param array $item Navigation item data
      * @return void
      */
@@ -349,10 +358,10 @@ class SAW_App_Bottom_Nav {
                 aria-current="page"
             <?php endif; ?>
         >
-            <span class="saw-bottom-nav-icon">
+            <span class="sa-bottom-nav-icon">
                 <?php echo $this->get_icon_svg($item['icon']); ?>
             </span>
-            <span class="saw-bottom-nav-label">
+            <span class="sa-bottom-nav-label">
                 <?php echo esc_html($item['label']); ?>
             </span>
         </a>
