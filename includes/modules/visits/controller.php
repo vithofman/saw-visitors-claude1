@@ -2078,98 +2078,139 @@ public function ajax_send_invitation() {
     /**
      * Get table columns configuration for infinite scroll
      * 
+     * ⭐ SYNCED with list-template.php - must match exactly!
+     * 
      * @since 7.0.0
      * @return array Columns configuration
      */
     protected function get_table_columns() {
+        // Load translations (same as list-template.php)
+        $lang = 'cs';
+        if (class_exists('SAW_Component_Language_Switcher')) {
+            $lang = SAW_Component_Language_Switcher::get_user_language();
+        }
+        $t = function_exists('saw_get_translations') 
+            ? saw_get_translations($lang, 'admin', 'visits') 
+            : [];
+        
+        $tr = function($key, $fallback = null) use ($t) {
+            return $t[$key] ?? $fallback ?? $key;
+        };
+        
+        // Same labels as list-template.php
+        $visitor_company_label = $tr('visitor_company', 'Firma');
+        $visitor_physical_label = $tr('visitor_physical', 'Fyzická osoba');
+        $visitor_physical_short = $tr('visitor_physical_short', 'Fyzická');
+        
         return array(
             'company_person' => array(
-                'label' => 'Návštěvník',
+                'label' => $tr('col_visitor', 'Návštěvník'),
                 'type' => 'custom',
                 'sortable' => true,
                 'class' => 'saw-table-cell-bold',
-                'width' => '280px', // ⭐ Zúžený sloupec
-                'callback' => function($value, $item) {
+                'width' => '40%',
+                'callback' => function($value, $item) use ($visitor_company_label, $visitor_physical_label, $visitor_physical_short) {
                     if (!empty($item['company_id'])) {
-                        echo '<div style="display: flex; align-items: center; gap: 8px;">';
-                        echo '<strong>' . esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']) . '</strong>';
+                        $company_name = esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']);
+                        echo '<div class="saw-visitor-cell">';
+                        echo '<strong class="saw-visitor-name">' . $company_name . '</strong>';
+                        echo '<span class="saw-badge saw-badge-info saw-visitor-type-badge">';
                         if (class_exists('SAW_Icons')) {
-                            echo '<span class="saw-badge saw-badge-info saw-text-xs">' . SAW_Icons::get('building-2', 'saw-icon--xs') . ' Firma</span>';
-                        } else {
-                            echo '<span class="saw-badge saw-badge-info saw-text-xs">🏢 Firma</span>';
+                            echo SAW_Icons::get('building-2', 'saw-icon--xs');
                         }
+                        echo '<span class="saw-badge-text">' . esc_html($visitor_company_label) . '</span>';
+                        echo '</span>';
                         echo '</div>';
                     } else {
-                        echo '<div style="display: flex; align-items: center; gap: 8px;">';
-                        if (!empty($item['first_visitor_name'])) {
-                            echo '<strong class="saw-text-brand">' . esc_html($item['first_visitor_name']) . '</strong>';
-                        } else {
-                            echo '<strong class="saw-text-brand">Fyzická osoba</strong>';
+                        $person_name = !empty($item['first_visitor_name']) 
+                            ? esc_html($item['first_visitor_name']) 
+                            : esc_html($visitor_physical_label);
+                            
+                        echo '<div class="saw-visitor-cell">';
+                        echo '<strong class="saw-visitor-name saw-visitor-name-person">' . $person_name . '</strong>';
+                        echo '<span class="saw-badge saw-badge-primary saw-visitor-type-badge">';
+                        if (class_exists('SAW_Icons')) {
+                            echo SAW_Icons::get('user', 'saw-icon--sm');
                         }
-                            if (class_exists('SAW_Icons')) {
-                                echo '<span class="saw-badge saw-badge-primary saw-text-xs">' . SAW_Icons::get('user', 'saw-icon--xs') . ' Fyzická</span>';
-                            } else {
-                                echo '<span class="saw-badge saw-badge-primary saw-text-xs">👤 Fyzická</span>';
-                            }
+                        echo '<span class="saw-badge-text">' . esc_html($visitor_physical_short) . '</span>';
+                        echo '</span>';
                         echo '</div>';
                     }
                 },
             ),
-            // ⭐ Sloupec pobočky odstraněn - zobrazují se jen data zvolené pobočky z branch switcher
+            
             'visit_type' => array(
-                'label' => 'Typ',
+                'label' => $tr('col_type', 'Typ'),
                 'type' => 'badge',
                 'sortable' => true,
-                'width' => '120px',
+                'width' => '10%',
                 'map' => array(
                     'planned' => 'info',
                     'walk_in' => 'warning',
                 ),
                 'labels' => array(
-                    'planned' => 'Plánovaná',
-                    'walk_in' => 'Walk-in',
+                    'planned' => $tr('visit_type_planned', 'Plánovaná'),
+                    'walk_in' => $tr('visit_type_walk_in', 'Walk-in'),
                 ),
             ),
+            
             'visitor_count' => array(
-                'label' => 'Počet',
+                'label' => $tr('col_count', 'Počet'),
                 'type' => 'custom',
-                'width' => '100px',
+                'width' => '8%',
                 'align' => 'center',
+                'sortable' => false,
                 'callback' => function($value, $item) {
                     $count = intval($item['visitor_count'] ?? 0);
                     if ($count === 0) {
                         echo '<span class="saw-text-muted">—</span>';
                     } else {
+                        echo '<div class="saw-visitor-count">';
                         if (class_exists('SAW_Icons')) {
-                            echo '<strong class="saw-text-brand">' . SAW_Icons::get('users', 'saw-icon--sm') . ' ' . $count . '</strong>';
-                        } else {
-                            echo '<strong class="saw-text-brand">👥 ' . $count . '</strong>';
+                            echo SAW_Icons::get('users', 'saw-icon--sm');
                         }
+                        echo '<strong class="saw-visitor-count-number">' . $count . '</strong>';
+                        echo '</div>';
                     }
                 },
             ),
+            
             'risks_status' => array(
-                'label' => 'Rizika',
-                'type' => 'badge',
+                'label' => $tr('col_risks', 'Rizika'),
+                'type' => 'custom',
                 'sortable' => true,
-                'width' => '120px',
+                'width' => '12%',
                 'align' => 'center',
-                'map' => array(
-                    'pending' => 'secondary',
-                    'completed' => 'success',
-                    'missing' => 'danger',
-                ),
-                'labels' => array(
-                    'pending' => 'Čeká se',
-                    'completed' => 'OK',
-                    'missing' => 'Chybí',
-                ),
+                'callback' => function($value, $item) use ($tr) {
+                    $status = $item['risks_status'] ?? 'missing';
+                    
+                    if ($status === 'missing') {
+                        echo '<span class="saw-risks-missing" title="' . esc_attr($tr('risks_missing_title', 'Chybí informace o rizicích')) . '">';
+                        if (class_exists('SAW_Icons')) {
+                            echo SAW_Icons::get('alert-triangle', 'saw-icon--sm');
+                        }
+                        echo '<span class="saw-risks-label">' . esc_html($tr('risks_missing', 'Chybí')) . '</span>';
+                        echo '</span>';
+                    } elseif ($status === 'pending') {
+                        echo '<span class="saw-badge saw-badge-secondary">' . esc_html($tr('risks_pending', 'Čeká se')) . '</span>';
+                    } elseif ($status === 'completed') {
+                        echo '<span class="saw-badge saw-badge-success">';
+                        if (class_exists('SAW_Icons')) {
+                            echo SAW_Icons::get('check-circle', 'saw-icon--sm');
+                        }
+                        echo '<span class="saw-badge-text">' . esc_html($tr('risks_ok', 'OK')) . '</span>';
+                        echo '</span>';
+                    } else {
+                        echo '<span class="saw-text-muted">—</span>';
+                    }
+                },
             ),
+            
             'status' => array(
-                'label' => 'Stav',
+                'label' => $tr('col_status', 'Stav'),
                 'type' => 'badge',
                 'sortable' => true,
-                'width' => '140px',
+                'width' => '15%',
                 'map' => array(
                     'draft' => 'secondary',
                     'pending' => 'warning',
@@ -2179,19 +2220,20 @@ public function ajax_send_invitation() {
                     'cancelled' => 'danger',
                 ),
                 'labels' => array(
-                    'draft' => 'Koncept',
-                    'pending' => 'Čekající',
-                    'confirmed' => 'Potvrzená',
-                    'in_progress' => 'Probíhající',
-                    'completed' => 'Dokončená',
-                    'cancelled' => 'Zrušená',
+                    'draft' => $tr('status_draft', 'Koncept'),
+                    'pending' => $tr('status_pending', 'Čekající'),
+                    'confirmed' => $tr('status_confirmed', 'Potvrzená'),
+                    'in_progress' => $tr('status_in_progress', 'Probíhající'),
+                    'completed' => $tr('status_completed', 'Dokončená'),
+                    'cancelled' => $tr('status_cancelled', 'Zrušená'),
                 ),
             ),
+            
             'planned_date_from' => array(
-                'label' => 'Datum návštěvy (od)',
+                'label' => $tr('col_planned_date_from', 'Datum návštěvy (od)'),
                 'type' => 'date',
                 'sortable' => true,
-                'width' => '140px',
+                'width' => '15%',
                 'format' => 'd.m.Y',
             ),
         );

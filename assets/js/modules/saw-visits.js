@@ -27,7 +27,7 @@
     // ================================================
     // COMPANY FIELD TOGGLE (FIXED v3.7.0)
     // ================================================
-    
+
     /**
      * Get all company field elements (select-create component)
      * ⭐ FIX v3.8.0: Field name changed to 'visit_company_selection' to prevent browser autocomplete
@@ -40,22 +40,22 @@
             $dropdown: $('#saw-select-visit_company_selection-dropdown')
         };
     }
-    
+
     /**
      * Toggle company field visibility based on has_company radio
      */
     function toggleCompanyField() {
         const hasCompany = $('input[name="has_company"]:checked').val();
         const $companyRow = $('.field-company-row');
-        
+
         if (!$companyRow.length) return;
-        
+
         const elements = getCompanyElements();
 
         if (hasCompany === '1') {
             // Show company field - Legal person
             $companyRow.slideDown(200);
-            
+
             // Set required on the search input (visible element after select-create init)
             if (elements.$search.length) {
                 elements.$search.prop('required', true);
@@ -65,76 +65,76 @@
         } else {
             // Hide company field - Physical person
             $companyRow.slideUp(200);
-            
+
             // Remove required
             if (elements.$search.length) {
                 elements.$search.prop('required', false);
             } else if (elements.$select.length) {
                 elements.$select.prop('required', false);
             }
-            
+
             // Clear ALL related inputs:
             // 1. Hidden input (stores actual value for searchable select)
             if (elements.$hidden.length) {
                 elements.$hidden.val('');
             }
-            
+
             // 2. Original select (for non-searchable fallback)
             if (elements.$select.length) {
                 elements.$select.val('');
             }
-            
+
             // 3. Search input text (visible search field)
             if (elements.$search.length) {
                 elements.$search.val('');
             }
-            
+
             // 4. Reset dropdown selection visual state
             if (elements.$dropdown.length) {
                 elements.$dropdown.find('.saw-select-search-item').removeClass('selected');
             }
         }
     }
-    
+
     /**
      * Initialize company field toggle
      */
     function initCompanyToggle() {
         const $companyRow = $('.field-company-row');
         if (!$companyRow.length) return;
-        
+
         // Wait for select-create to initialize
-        setTimeout(function() {
+        setTimeout(function () {
             // Remove old handlers
             $('input[name="has_company"]').off('change.companyToggle');
-            
+
             // Bind new handler
             $('input[name="has_company"]').on('change.companyToggle', toggleCompanyField);
-            
+
             // Set initial state
             toggleCompanyField();
         }, 200);
     }
-    
+
     // Ensure company_id is properly included in form submission
     function ensureCompanyIdOnSubmit() {
-        $('.saw-visit-form').off('submit.ensureCompanyId').on('submit.ensureCompanyId', function(e) {
+        $('.saw-visit-form').off('submit.ensureCompanyId').on('submit.ensureCompanyId', function (e) {
             const hasCompany = $('input[name="has_company"]:checked').val();
-            
+
             if (hasCompany === '1') {
                 // Legal person - ensure company_id is set
                 // ⭐ FIX v3.8.0: Use new field name 'visit_company_selection'
                 const $hiddenInput = $('input[type="hidden"][name="visit_company_selection"].saw-select-create-value');
                 const $searchInput = $('#saw-select-visit_company_selection-search');
-                
+
                 if ($hiddenInput.length) {
                     const companyId = $hiddenInput.val();
-                    
+
                     // If hidden input is empty but search input has text, try to find the value
                     if (!companyId && $searchInput.length && $searchInput.val()) {
                         console.warn('[VISITS] Company search has text but hidden input is empty - this may cause validation issues');
                     }
-                    
+
                     console.log('[VISITS] Form submit - has_company:', hasCompany, 'company_id:', companyId);
                 } else {
                     // This might happen if select-create component didn't initialize
@@ -160,25 +160,25 @@
         // ⭐ FIX v3.8.0: Use new field name 'visit_company_selection' to prevent browser autocomplete
         const $companyHidden = $('input[type="hidden"][name="visit_company_selection"].saw-select-create-value');
         const $companySearch = $('#saw-select-visit_company_selection-search');
-        
+
         if (!$emailInput.length || !$companyHidden.length) return;
-        
+
         // Store original company value when user manually selects it
         let userSelectedCompany = null;
         let companyValueBeforeEmailChange = null;
-        
+
         // Mark company as user-selected when manually changed
-        $companyHidden.on('change', function() {
+        $companyHidden.on('change', function () {
             const currentVal = $(this).val();
             if (currentVal && currentVal !== '') {
                 userSelectedCompany = currentVal;
                 console.log('[VISITS] Company manually selected:', currentVal);
             }
         });
-        
+
         // Also track when user selects from dropdown
-        $(document).on('click', '#saw-select-visit_company_selection-dropdown .saw-select-search-item', function() {
-            setTimeout(function() {
+        $(document).on('click', '#saw-select-visit_company_selection-dropdown .saw-select-search-item', function () {
+            setTimeout(function () {
                 const currentVal = $companyHidden.val();
                 if (currentVal && currentVal !== '') {
                     userSelectedCompany = currentVal;
@@ -186,21 +186,21 @@
                 }
             }, 100);
         });
-        
+
         // Before email input changes, save current company value
-        $emailInput.on('focus', function() {
+        $emailInput.on('focus', function () {
             companyValueBeforeEmailChange = $companyHidden.val();
         });
-        
+
         // After email input changes, check if company was overwritten by autocomplete
-        $emailInput.on('input change', function() {
+        $emailInput.on('input change', function () {
             const currentCompanyVal = $companyHidden.val();
-            
+
             // If company was manually selected by user, don't let autocomplete override it
             if (userSelectedCompany && currentCompanyVal !== userSelectedCompany) {
                 console.warn('[VISITS] Autocomplete tried to overwrite company, restoring user selection');
                 $companyHidden.val(userSelectedCompany);
-                
+
                 // Also restore search input if it exists
                 if ($companySearch.length) {
                     const selectedOption = $('#saw-select-visit_company_selection option[value="' + userSelectedCompany + '"]');
@@ -210,13 +210,13 @@
                 }
             }
             // If company was set before email change and now is different, restore it
-            else if (companyValueBeforeEmailChange && 
-                     companyValueBeforeEmailChange !== '' && 
-                     currentCompanyVal !== companyValueBeforeEmailChange &&
-                     !userSelectedCompany) {
+            else if (companyValueBeforeEmailChange &&
+                companyValueBeforeEmailChange !== '' &&
+                currentCompanyVal !== companyValueBeforeEmailChange &&
+                !userSelectedCompany) {
                 console.warn('[VISITS] Autocomplete changed company, restoring previous value');
                 $companyHidden.val(companyValueBeforeEmailChange);
-                
+
                 if ($companySearch.length) {
                     const selectedOption = $('#saw-select-visit_company_selection option[value="' + companyValueBeforeEmailChange + '"]');
                     if (selectedOption.length) {
@@ -226,14 +226,14 @@
             }
         });
     }
-    
+
     $(document).ready(function () {
         // Initialize company toggle
         initCompanyToggle();
-        
+
         // Ensure company_id on form submit
         ensureCompanyIdOnSubmit();
-        
+
         // Prevent autocomplete from overwriting company
         preventAutocompleteCompanyOverwrite();
 
@@ -521,10 +521,10 @@
         }
 
         let allHosts = [];
-        
+
         // Get existing hosts from window.sawVisitsData
         let existingIds = [];
-        
+
         if (typeof window.sawVisitsData !== 'undefined' && window.sawVisitsData !== null) {
             if (Array.isArray(window.sawVisitsData.existing_hosts)) {
                 existingIds = window.sawVisitsData.existing_hosts.map(id => parseInt(id)).filter(id => !isNaN(id));
@@ -532,12 +532,12 @@
         }
 
         // Get AJAX URL and nonce from sawGlobal (always available)
-        const ajaxUrl = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.ajaxurl) 
-            ? window.sawGlobal.ajaxurl 
+        const ajaxUrl = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.ajaxurl)
+            ? window.sawGlobal.ajaxurl
             : '/wp-admin/admin-ajax.php';
-        
-        const ajaxNonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce) 
-            ? window.sawGlobal.nonce 
+
+        const ajaxNonce = (typeof window.sawGlobal !== 'undefined' && window.sawGlobal.nonce)
+            ? window.sawGlobal.nonce
             : '';
 
         // Validate nonce is available
@@ -569,7 +569,7 @@
                     }
                 }
             }
-            
+
             // 2. Zkusit disabled select (pro zobrazení)
             if (branchSelect.length) {
                 const val = branchSelect.val();
@@ -585,18 +585,18 @@
                     }
                 }
             }
-            
+
             console.warn('[Hosts Manager] No branch ID found');
             return null;
         }
 
         // Load hosts if branch is available
         const currentBranchId = getBranchId();
-        
+
         if (currentBranchId) {
             console.log('[Hosts Manager] Initializing with branch ID:', currentBranchId);
             // Small delay to ensure DOM is fully ready
-            setTimeout(function() {
+            setTimeout(function () {
                 loadHosts();
             }, 150);
         } else {
@@ -645,7 +645,7 @@
                 },
                 error: function (xhr, status, error) {
                     let errorMessage = '❌ Chyba při načítání uživatelů';
-                    
+
                     if (xhr.status === 403) {
                         errorMessage = '❌ Chyba: Oprávnění zamítnuto. Možná problém s nonce.';
                     } else if (xhr.status === 0) {
@@ -653,7 +653,7 @@
                     } else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
                         errorMessage = '❌ ' + xhr.responseJSON.data.message;
                     }
-                    
+
                     hostList.html('<p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center; color: #d63638;">' + errorMessage + '</p>');
                     hostControls.hide();
                 }
@@ -662,7 +662,7 @@
 
         function renderHosts() {
             let html = '';
-            
+
             // Use existingIds from closure
             const currentExistingIds = existingIds;
 
@@ -760,7 +760,7 @@
     // ========================================
     // INITIALIZATION
     // ========================================
-    
+
     /**
      * Wait for window.sawVisitsData to be available before initializing
      * Uses polling with exponential backoff for reliability
@@ -768,10 +768,10 @@
     function waitForSawVisits(callback, maxAttempts = 20) {
         let attempts = 0;
         const baseDelay = 50; // Start with 50ms
-        
+
         function check() {
             attempts++;
-            
+
             // Check if sawVisitsData exists (contains existing_hosts)
             if (typeof window.sawVisitsData !== 'undefined' && window.sawVisitsData !== null) {
                 callback();
@@ -784,7 +784,7 @@
                 callback();
             }
         }
-        
+
         check();
     }
 
@@ -797,15 +797,15 @@
     $(document).on('saw:page-loaded saw:sidebar-loaded', function () {
         // Re-initialize company toggle
         setTimeout(initCompanyToggle, 50);
-        
+
         // Re-ensure company_id on form submit
         setTimeout(ensureCompanyIdOnSubmit, 50);
-        
+
         // Re-initialize autocomplete protection
         setTimeout(preventAutocompleteCompanyOverwrite, 100);
-        
+
         // Wait a bit for wp_localize_script to update window.sawVisits
-        setTimeout(function() {
+        setTimeout(function () {
             waitForSawVisits(initHostsManager, 10); // Fewer attempts for re-init
         }, 50);
     });
@@ -814,7 +814,7 @@
     // VISITORS MANAGER
     // ========================================
     const SAWVisitorsManager = {
-        
+
         // ========================================
         // KONFIGURACE
         // ========================================
@@ -822,7 +822,7 @@
             maxVisitors: 50,
             requiredFields: ['first_name', 'last_name'],
         },
-        
+
         // ========================================
         // STAV
         // ========================================
@@ -833,7 +833,7 @@
             visitId: null,
             editingIndex: null,
         },
-        
+
         // ========================================
         // INICIALIZACE
         // ========================================
@@ -848,9 +848,9 @@
          * from CREATE to EDIT form via AJAX, .data() returns cached empty array
          * instead of fresh data from DOM. Using .attr() always reads from DOM.
          */
-        init: function() {
+        init: function () {
             console.log('[SAWVisitorsManager] init() called - v3.6.0');
-            
+
             // VŽDY resetovat state před načtením nových dat (důležité při AJAX načtení)
             this.state = {
                 visitors: [],
@@ -859,38 +859,38 @@
                 visitId: null,
                 editingIndex: null,
             };
-            
+
             // Kontrola existence kontejneru
             if (!$('#visitors-list-container').length) {
                 console.log('[SAWVisitorsManager] Container not found, skipping init');
                 return;
             }
-            
+
             const $form = $('.saw-visit-form');
             let visitorsData = [];
             let translations = {};
-            
+
             // ================================================
             // ⭐ PRIORITA 1: Data z window objektu (inline script)
             // Toto obchází jQuery .data() cache problém úplně
             // ================================================
             if (window.sawVisitorsFormData && typeof window.sawVisitorsFormData === 'object') {
                 console.log('[SAWVisitorsManager] Using data from window.sawVisitorsFormData (preferred)');
-                
+
                 this.state.mode = window.sawVisitorsFormData.mode || 'create';
                 this.state.visitId = window.sawVisitorsFormData.visitId || null;
                 visitorsData = window.sawVisitorsFormData.existingVisitors || [];
                 translations = window.sawVisitorsFormData.translations || {};
-                
+
                 console.log('[SAWVisitorsManager] Loaded from window object:', {
                     mode: this.state.mode,
                     visitId: this.state.visitId,
                     visitorsCount: visitorsData.length
                 });
-                
+
                 // Vyčistit po použití (prevence opakovaného použití starých dat)
                 delete window.sawVisitorsFormData;
-            } 
+            }
             // ================================================
             // ⭐ PRIORITA 2: Fallback na data atributy
             // KRITICKÉ: Použít .attr() místo .data()
@@ -898,18 +898,18 @@
             // ================================================
             else if ($form.length) {
                 console.log('[SAWVisitorsManager] Using data from form attributes (with .attr() fix)');
-                
+
                 // ✅ OPRAVA v3.5.0: .attr() místo .data() - vždy čte aktuální hodnotu z DOM
                 const mode = $form.attr('data-visitors-mode') || 'create';
                 const visitIdRaw = $form.attr('data-visit-id');
                 const visitId = visitIdRaw ? parseInt(visitIdRaw) : null;
-                
+
                 const visitorsDataRaw = $form.attr('data-visitors-data');
                 const translationsRaw = $form.attr('data-visitors-translations');
-                
+
                 this.state.mode = mode;
                 this.state.visitId = visitId;
-                
+
                 // Bezpečné parsování JSON (.attr() vrací string, .data() auto-parsuje)
                 if (visitorsDataRaw) {
                     try {
@@ -922,7 +922,7 @@
                         visitorsData = [];
                     }
                 }
-                
+
                 if (translationsRaw) {
                     try {
                         const parsedTranslations = JSON.parse(translationsRaw);
@@ -934,22 +934,22 @@
                         translations = {};
                     }
                 }
-                
+
                 console.log('[SAWVisitorsManager] Loaded from data attributes:', {
                     mode: mode,
                     visitId: this.state.visitId,
                     visitorsCount: visitorsData.length
                 });
             }
-            
+
             // Uložení překladů do window pro kompatibilitu s ostatním kódem
             window.sawVisitorsData = window.sawVisitorsData || {};
             window.sawVisitorsData.translations = translations;
-            
+
             // Načtení existujících návštěvníků (EDIT mode)
             if (Array.isArray(visitorsData) && visitorsData.length > 0) {
                 console.log('[SAWVisitorsManager] Loading existing visitors:', visitorsData.length);
-                
+
                 this.state.visitors = visitorsData.map(v => ({
                     _tempId: 'existing_' + v.id,
                     _dbId: parseInt(v.id),
@@ -960,82 +960,82 @@
                     phone: v.phone || '',
                     position: v.position || '',
                 }));
-                
+
                 // Uložení originálu pro detekci změn
                 this.state.originalVisitors = JSON.parse(JSON.stringify(this.state.visitors));
-                
+
                 console.log('[SAWVisitorsManager] Loaded', this.state.visitors.length, 'visitors into state');
             } else {
                 console.log('[SAWVisitorsManager] No existing visitors found');
             }
-            
+
             // Bind events
             this.bindEvents();
-            
+
             // Initial render
             this.render();
         },
-        
+
         // ========================================
         // EVENT BINDING
         // ========================================
-        bindEvents: function() {
+        bindEvents: function () {
             const self = this;
             const namespace = '.saw-visitors-manager';
-            
+
             // Odstranit staré handlery před přidáním nových
             $('#btn-add-visitor').off(namespace);
             $('#btn-visitor-back, #btn-visitor-cancel').off(namespace);
             $('#btn-visitor-save').off(namespace);
             $('#visitors-list').off(namespace);
             $('.saw-visit-form').off(namespace);
-            
+
             // Tlačítko přidat
-            $('#btn-add-visitor').on('click' + namespace, function() {
+            $('#btn-add-visitor').on('click' + namespace, function () {
                 self.openNestedForm(null);
             });
-            
+
             // Tlačítko zpět
-            $('#btn-visitor-back, #btn-visitor-cancel').on('click' + namespace, function() {
+            $('#btn-visitor-back, #btn-visitor-cancel').on('click' + namespace, function () {
                 self.closeNestedForm();
             });
-            
+
             // Tlačítko uložit návštěvníka
-            $('#btn-visitor-save').on('click' + namespace, function() {
+            $('#btn-visitor-save').on('click' + namespace, function () {
                 self.saveVisitor();
             });
-            
+
             // Delegované eventy pro karty
-            $('#visitors-list').on('click' + namespace, '.btn-edit', function() {
+            $('#visitors-list').on('click' + namespace, '.btn-edit', function () {
                 const tempId = $(this).closest('.saw-visitor-card').data('temp-id');
                 const index = self.findIndexByTempId(tempId);
                 if (index !== -1) {
                     self.openNestedForm(index);
                 }
             });
-            
-            $('#visitors-list').on('click' + namespace, '.btn-delete', function() {
+
+            $('#visitors-list').on('click' + namespace, '.btn-delete', function () {
                 const tempId = $(this).closest('.saw-visitor-card').data('temp-id');
                 const index = self.findIndexByTempId(tempId);
                 if (index !== -1) {
                     self.removeVisitor(index);
                 }
             });
-            
+
             // Před odesláním formuláře - serializace
-            $('.saw-visit-form').on('submit' + namespace, function() {
+            $('.saw-visit-form').on('submit' + namespace, function () {
                 self.serializeToInput();
             });
         },
-        
+
         // ========================================
         // NESTED FORM OPERATIONS
         // ========================================
-        openNestedForm: function(index) {
+        openNestedForm: function (index) {
             const t = window.sawVisitorsData?.translations || {};
-            
+
             this.state.editingIndex = index;
-            
+
             // Nastavení titulku
             if (index === null) {
                 $('#visitor-form-title').text('👤 ' + (t.title_add || 'Přidat návštěvníka'));
@@ -1046,42 +1046,50 @@
                 $('#btn-visitor-save').text('✓ ' + (t.btn_save || 'Uložit návštěvníka'));
                 this.fillNestedForm(this.state.visitors[index]);
             }
-            
+
             // Zobrazení
             $('#visit-main-form, .saw-form-section').hide();
             $('#visitor-nested-form').show();
             $('#visitor-first-name').focus();
+
+            // ⭐ Hide FAB when nested form is open
+            $('.sa-sidebar-fab-container, .sa-sidebar-fab-container--form, .sa-sidebar-fab').hide();
         },
-        
-        closeNestedForm: function() {
+
+
+        closeNestedForm: function () {
             this.state.editingIndex = null;
-            
+
             // Skrytí nested form, zobrazení hlavního
             $('#visitor-nested-form').hide();
             $('#visit-main-form, .saw-form-section').show();
-            
+
+            // ⭐ Show FAB when nested form is closed
+            $('.sa-sidebar-fab-container, .sa-sidebar-fab-container--form, .sa-sidebar-fab').show();
+
             // Vyčištění
             this.clearNestedForm();
-            
+
+
             // ========================================
             // OPRAVENO: Scrollování na sekci návštěvníků
             // Scrolluje sidebar content (ne html/body)
             // ========================================
             const $visitorsSection = $('.saw-visitors-section');
             if ($visitorsSection.length) {
-                setTimeout(function() {
+                setTimeout(function () {
                     // Najít scroll container (sidebar content)
                     const $scrollContainer = $visitorsSection.closest('.saw-sidebar-content');
-                    
+
                     if ($scrollContainer.length) {
                         // Jsme v sidebaru - scrolluj sidebar content
                         const containerScrollTop = $scrollContainer.scrollTop();
                         const containerOffset = $scrollContainer.offset().top;
                         const sectionOffset = $visitorsSection.offset().top;
-                        
+
                         // Vypočítat pozici sekce relativně k aktuálnímu scrollu
                         const scrollTo = containerScrollTop + (sectionOffset - containerOffset) - 20;
-                        
+
                         $scrollContainer.animate({
                             scrollTop: Math.max(0, scrollTo)
                         }, 300);
@@ -1097,28 +1105,28 @@
                 }, 150); // Mírně delší zpoždění pro DOM update
             }
         },
-        
-        clearNestedForm: function() {
+
+        clearNestedForm: function () {
             $('#visitor-first-name').val('');
             $('#visitor-last-name').val('');
             $('#visitor-email').val('');
             $('#visitor-phone').val('');
             $('#visitor-position').val('');
-            
+
             // Reset error states
             $('.saw-nested-form-body .saw-input').removeClass('has-error');
             $('.saw-nested-form-body .saw-field-error').remove();
         },
-        
-        fillNestedForm: function(visitor) {
+
+        fillNestedForm: function (visitor) {
             $('#visitor-first-name').val(visitor.first_name || '');
             $('#visitor-last-name').val(visitor.last_name || '');
             $('#visitor-email').val(visitor.email || '');
             $('#visitor-phone').val(visitor.phone || '');
             $('#visitor-position').val(visitor.position || '');
         },
-        
-        getNestedFormData: function() {
+
+        getNestedFormData: function () {
             return {
                 first_name: $('#visitor-first-name').val().trim(),
                 last_name: $('#visitor-last-name').val().trim(),
@@ -1127,14 +1135,14 @@
                 position: $('#visitor-position').val().trim(),
             };
         },
-        
+
         // ========================================
         // VALIDACE
         // ========================================
-        validate: function(data) {
+        validate: function (data) {
             const t = window.sawVisitorsData?.translations || {};
             const errors = [];
-            
+
             // Povinná pole
             if (!data.first_name) {
                 errors.push({ field: 'first_name', message: t.error_required || 'Jméno je povinné' });
@@ -1142,38 +1150,38 @@
             if (!data.last_name) {
                 errors.push({ field: 'last_name', message: t.error_required || 'Příjmení je povinné' });
             }
-            
+
             // Email formát
             if (data.email && !this.isValidEmail(data.email)) {
                 errors.push({ field: 'email', message: t.error_email || 'Neplatný formát emailu' });
             }
-            
+
             // Duplicita emailu
             if (data.email) {
-                const duplicate = this.state.visitors.find((v, i) => 
-                    v._status !== 'deleted' && 
+                const duplicate = this.state.visitors.find((v, i) =>
+                    v._status !== 'deleted' &&
                     i !== this.state.editingIndex &&
-                    v.email && 
+                    v.email &&
                     v.email.toLowerCase() === data.email.toLowerCase()
                 );
-                
+
                 if (duplicate) {
                     errors.push({ field: 'email', message: t.error_duplicate || 'Návštěvník s tímto emailem již je v seznamu' });
                 }
             }
-            
+
             return errors;
         },
-        
-        isValidEmail: function(email) {
+
+        isValidEmail: function (email) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         },
-        
-        showErrors: function(errors) {
+
+        showErrors: function (errors) {
             // Reset
             $('.saw-nested-form-body .saw-input').removeClass('has-error');
             $('.saw-nested-form-body .saw-field-error').remove();
-            
+
             // Zobrazení chyb
             errors.forEach(err => {
                 const fieldMap = {
@@ -1181,7 +1189,7 @@
                     'last_name': '#visitor-last-name',
                     'email': '#visitor-email',
                 };
-                
+
                 const $field = $(fieldMap[err.field]);
                 if ($field.length) {
                     $field.addClass('has-error');
@@ -1189,26 +1197,26 @@
                 }
             });
         },
-        
+
         // ========================================
         // CRUD OPERACE
         // ========================================
-        saveVisitor: function() {
+        saveVisitor: function () {
             const data = this.getNestedFormData();
             const errors = this.validate(data);
-            
+
             if (errors.length > 0) {
                 this.showErrors(errors);
                 return;
             }
-            
+
             if (this.state.editingIndex === null) {
                 // Nový návštěvník
                 if (this.getActiveCount() >= this.config.maxVisitors) {
                     alert('Maximální počet návštěvníků je ' + this.config.maxVisitors);
                     return;
                 }
-                
+
                 this.state.visitors.push({
                     _tempId: 'temp_' + Date.now(),
                     _dbId: null,
@@ -1218,10 +1226,10 @@
             } else {
                 // Editace existujícího
                 const visitor = this.state.visitors[this.state.editingIndex];
-                
+
                 // Aktualizace dat
                 Object.assign(visitor, data);
-                
+
                 // Změna statusu (pokud byl existing a změněn)
                 if (visitor._status === 'existing') {
                     if (this.hasChanges(visitor)) {
@@ -1229,20 +1237,20 @@
                     }
                 }
             }
-            
+
             this.closeNestedForm();
             this.render();
         },
-        
-        removeVisitor: function(index) {
+
+        removeVisitor: function (index) {
             const t = window.sawVisitorsData?.translations || {};
-            
+
             if (!confirm(t.confirm_delete || 'Opravdu chcete odebrat tohoto návštěvníka?')) {
                 return;
             }
-            
+
             const visitor = this.state.visitors[index];
-            
+
             if (visitor._status === 'new') {
                 // Nový - úplně smazat z pole
                 this.state.visitors.splice(index, 1);
@@ -1250,35 +1258,35 @@
                 // Existující z DB - označit jako deleted
                 visitor._status = 'deleted';
             }
-            
+
             this.render();
         },
-        
-        hasChanges: function(visitor) {
+
+        hasChanges: function (visitor) {
             if (!visitor._dbId) return true;
-            
+
             const original = this.state.originalVisitors.find(v => v._dbId === visitor._dbId);
             if (!original) return true;
-            
+
             const fields = ['first_name', 'last_name', 'email', 'phone', 'position'];
-            
+
             return fields.some(field => visitor[field] !== original[field]);
         },
-        
+
         // ========================================
         // HELPERS
         // ========================================
-        findIndexByTempId: function(tempId) {
+        findIndexByTempId: function (tempId) {
             return this.state.visitors.findIndex(v => v._tempId === tempId);
         },
-        
-        getActiveCount: function() {
+
+        getActiveCount: function () {
             return this.state.visitors.filter(v => v._status !== 'deleted').length;
         },
-        
-        getCountLabel: function(count) {
+
+        getCountLabel: function (count) {
             const t = window.sawVisitorsData?.translations || {};
-            
+
             if (count === 1) {
                 return t.person_singular || 'návštěvník';
             } else if (count >= 2 && count <= 4) {
@@ -1287,20 +1295,20 @@
                 return t.person_many || 'návštěvníků';
             }
         },
-        
+
         // ========================================
         // RENDERING
         // ========================================
-        render: function() {
+        render: function () {
             const activeVisitors = this.state.visitors.filter(v => v._status !== 'deleted');
             const count = activeVisitors.length;
-            
+
             console.log('[SAWVisitorsManager] Rendering:', {
                 total: this.state.visitors.length,
                 active: count,
                 visitors: this.state.visitors
             });
-            
+
             // Empty state vs list
             if (count === 0) {
                 $('#visitors-empty-state').show();
@@ -1310,29 +1318,29 @@
                 $('#visitors-empty-state').hide();
                 $('#visitors-list').show();
                 $('#visitors-counter').show();
-                
+
                 // Render cards
                 let html = '';
                 activeVisitors.forEach(visitor => {
                     html += this.renderCard(visitor);
                 });
                 $('#visitors-list').html(html);
-                
+
                 // Update counter
                 $('#visitors-count').text(count);
                 $('#visitors-count-label').text(this.getCountLabel(count));
             }
-            
+
             // Aktualizace hidden inputu
             this.serializeToInput();
         },
-        
-        renderCard: function(visitor) {
-            const statusClass = visitor._status === 'new' ? 'is-new' : 
-                               (visitor._status === 'modified' ? 'is-modified' : '');
-            
+
+        renderCard: function (visitor) {
+            const statusClass = visitor._status === 'new' ? 'is-new' :
+                (visitor._status === 'modified' ? 'is-modified' : '');
+
             const name = visitor.first_name + ' ' + visitor.last_name;
-            
+
             // Detail badges s SVG ikonami
             let details = [];
             if (visitor.email) {
@@ -1367,12 +1375,12 @@
                     </span>
                 `);
             }
-            
+
             // Badge pro nové návštěvníky
-            const newBadge = visitor._status === 'new' 
-                ? '<span class="saw-badge-new">NOVÝ</span>' 
+            const newBadge = visitor._status === 'new'
+                ? '<span class="saw-badge-new">NOVÝ</span>'
                 : '';
-            
+
             return `
                 <div class="saw-visitor-card ${statusClass}" data-temp-id="${visitor._tempId}">
                     <div class="saw-visitor-card-info">
@@ -1405,17 +1413,17 @@
                 </div>
             `;
         },
-        
-        escapeHtml: function(text) {
+
+        escapeHtml: function (text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         },
-        
+
         // ========================================
         // SERIALIZACE
         // ========================================
-        serializeToInput: function() {
+        serializeToInput: function () {
             // Připravit data pro backend
             const dataForBackend = this.state.visitors.map(v => {
                 if (v._status === 'deleted') {
@@ -1425,7 +1433,7 @@
                         _status: v._status
                     };
                 }
-                
+
                 return {
                     _dbId: v._dbId,
                     _status: v._status,
@@ -1436,11 +1444,11 @@
                     position: v.position,
                 };
             });
-            
+
             $('#visitors-json-input').val(JSON.stringify(dataForBackend));
         },
     };
-    
+
     // ========================================
     // WAIT FOR VISITORS DATA
     // ========================================
@@ -1457,38 +1465,38 @@
     function waitForVisitorsData(callback, maxAttempts = 20, initialDelay = 0) {
         let attempts = 0;
         const baseDelay = 50;
-        
+
         function check() {
             attempts++;
-            
+
             // Kontrola existence kontejneru
             const containerExists = $('#visitors-list-container').length > 0;
-            
+
             // ✅ OPRAVA v3.5.0: Použít .attr() místo .data()
             // .data() cachuje hodnoty a vrací staré data při AJAX navigaci
             const $form = $('.saw-visit-form');
             const formDataExists = $form.length > 0 && $form.attr('data-visitors-mode') !== undefined;
-            
+
             // Pro EDIT režim: ověřit, že visit ID odpovídá (pokud je v URL nebo sidebaru)
             let visitIdMatches = true;
             if (formDataExists) {
                 // ✅ OPRAVA: .attr() místo .data()
                 const formVisitIdRaw = $form.attr('data-visit-id');
                 const formVisitId = formVisitIdRaw ? parseInt(formVisitIdRaw) : null;
-                
+
                 // Zkontrolovat URL pro očekávané visit ID
                 const urlMatch = window.location.pathname.match(/\/visits\/(\d+)\//);
                 const urlVisitId = urlMatch ? parseInt(urlMatch[1]) : null;
-                
+
                 // Zkontrolovat sidebar
                 const $sidebar = $('.saw-sidebar[data-current-id]');
                 // ✅ OPRAVA: .attr() místo .data()
                 const sidebarVisitIdRaw = $sidebar.length ? $sidebar.attr('data-current-id') : null;
                 const sidebarVisitId = sidebarVisitIdRaw ? parseInt(sidebarVisitIdRaw) : null;
-                
+
                 // Očekávané visit ID (priorita: sidebar > URL)
                 const expectedVisitId = sidebarVisitId || urlVisitId;
-                
+
                 // Pokud máme očekávané ID a form ID, musí se shodovat
                 if (expectedVisitId && formVisitId && formVisitId !== expectedVisitId) {
                     visitIdMatches = false;
@@ -1500,22 +1508,22 @@
                     });
                 }
             }
-            
+
             const dataExists = formDataExists && visitIdMatches;
-            
+
             console.log('[SAWVisitorsManager] Check attempt', attempts, '/', maxAttempts, {
                 containerExists: containerExists,
                 formDataExists: formDataExists,
                 visitIdMatches: visitIdMatches,
                 dataExists: dataExists
             });
-            
+
             if (containerExists && dataExists) {
                 console.log('[SAWVisitorsManager] Data ready, initializing');
                 callback();
             } else if (attempts < maxAttempts) {
-                const delay = attempts === 1 && initialDelay > 0 
-                    ? initialDelay 
+                const delay = attempts === 1 && initialDelay > 0
+                    ? initialDelay
                     : baseDelay * Math.pow(2, Math.min(attempts - 1, 5));
                 setTimeout(check, delay);
             } else {
@@ -1524,42 +1532,42 @@
                 callback();
             }
         }
-        
+
         if (initialDelay > 0) {
             setTimeout(check, initialDelay);
         } else {
             check();
         }
     }
-    
+
     // ========================================
     // INITIALIZATION TRIGGERS
     // ========================================
-    
+
     // Inicializace VisitorsManager na document ready
-    $(document).ready(function() {
-        waitForVisitorsData(function() {
+    $(document).ready(function () {
+        waitForVisitorsData(function () {
             SAWVisitorsManager.init();
         });
     });
-    
+
     // Re-inicializace při AJAX načtení (obecné eventy)
-    $(document).on('saw:page-loaded saw:content-loaded', function() {
+    $(document).on('saw:page-loaded saw:content-loaded', function () {
         console.log('[SAWVisitorsManager] AJAX page loaded event received');
         // Data atributy jsou dostupné okamžitě po vložení HTML
-        waitForVisitorsData(function() {
+        waitForVisitorsData(function () {
             SAWVisitorsManager.init();
         }, 20, 100); // 20 pokusů, počáteční delay 100ms
     });
-    
+
     // ⭐ NEW v3.5.0: Přímá inicializace z inline scriptu
     // Toto umožňuje form-template.php přímo triggerovat inicializaci
     // s daty předanými přes window.sawVisitorsFormData
-    $(document).on('saw:init-visitors-manager', function() {
+    $(document).on('saw:init-visitors-manager', function () {
         console.log('[SAWVisitorsManager] saw:init-visitors-manager event received');
-        
+
         // Malý delay pro jistotu, že DOM je kompletně připraven
-        setTimeout(function() {
+        setTimeout(function () {
             SAWVisitorsManager.init();
         }, 10);
     });
@@ -1568,5 +1576,5 @@
     // ========================================
     // Umožňuje přímou inicializaci z inline scriptů
     window.SAWVisitorsManager = SAWVisitorsManager;
-    
+
 })(jQuery);

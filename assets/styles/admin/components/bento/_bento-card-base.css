@@ -14,7 +14,7 @@
     padding: var(--bento-card-padding);
     box-shadow: var(--bento-card-shadow);
     border: 1px solid var(--bento-border);
-    transition: 
+    transition:
         transform var(--bento-transition),
         box-shadow var(--bento-transition),
         background-color var(--bento-transition),
@@ -140,22 +140,30 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
     .bento-card {
-        padding: var(--bento-card-padding-sm);
-        border-radius: 16px;
+        padding: 12px;
+        border-radius: 12px;
     }
-    
+
     .bento-card:hover {
         transform: none;
     }
-    
+
     .bento-card-header {
-        gap: 10px;
-        margin-bottom: 12px;
+        gap: 8px;
+        margin-bottom: 8px;
     }
-    
+
     .bento-card-icon {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .bento-card-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .bento-card-title {
+        font-size: 0.8125rem;
     }
 }
-

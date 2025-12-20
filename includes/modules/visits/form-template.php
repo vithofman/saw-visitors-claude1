@@ -231,21 +231,6 @@ $form_action = $is_edit
 ?>
 
 <style>
-/* Visitor Type Toggle Styles */
-.saw-radio-toggle input:checked + .saw-radio-toggle-content {
-    border-color: #0073aa !important;
-    background: #f0f6fc !important;
-    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1) !important;
-}
-
-.saw-radio-toggle:hover .saw-radio-toggle-content {
-    border-color: #0073aa !important;
-}
-
-.saw-radio-toggle input:checked + .saw-radio-toggle-content > div:first-child {
-    color: #0073aa !important;
-}
-
 /* Rotation animation for loading spinner */
 @keyframes rotation {
     from {
@@ -258,12 +243,12 @@ $form_action = $is_edit
 </style>
 
 <?php if (!$in_sidebar): ?>
-<div class="saw-page-header">
-    <div class="saw-page-header-content">
-        <h1 class="saw-page-title">
+<div class="sa-page-header">
+    <div class="sa-page-header-content">
+        <h1 class="sa-page-title">
             <?php echo $is_edit ? $tr('form_title_edit', 'Upravit návštěvu') : $tr('form_title_create', 'Nová návštěva'); ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="saw-back-button">
+        <a href="<?php echo esc_url(home_url('/admin/visits/')); ?>" class="sa-btn sa-btn--ghost">
             <?php if (class_exists('SAW_Icons')): ?>
                 <?php echo SAW_Icons::get('chevron-left'); ?>
             <?php else: ?>
@@ -275,9 +260,11 @@ $form_action = $is_edit
 </div>
 <?php endif; ?>
 
-<div class="saw-form-container saw-module-visits">
+<div class="sa-form-container">
     <form method="POST" action="<?php echo esc_url($form_action); ?>" 
-          class="saw-visit-form"
+          class="sa-form saw-visits-form"
+          id="saw-visits-form"
+          data-module="visits"
           data-visitors-mode="<?php echo esc_attr($visitors_mode); ?>"
           data-visit-id="<?php echo !empty($item['id']) ? intval($item['id']) : ''; ?>"
           data-visitors-data="<?php echo esc_attr(json_encode($existing_visitors)); ?>"
@@ -295,25 +282,25 @@ $form_action = $is_edit
         
         <div id="visit-main-form">
         
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('settings', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('settings', 'sa-form-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-admin-generic"></span>
                 <?php endif; ?>
                 <strong><?php echo $tr('form_section_basic', 'Základní informace'); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
                 <!-- Branch - FIXED: Neměnná z branchswitcher, pole je disabled -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="branch_id" class="saw-label saw-required"><?php echo $tr('form_branch', 'Pobočka'); ?></label>
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="branch_id" class="sa-form-label sa-form-label--required"><?php echo $tr('form_branch', 'Pobočka'); ?></label>
                         <!-- Hidden input pro odeslání hodnoty -->
                         <input type="hidden" name="branch_id" id="branch_id_hidden" value="<?php echo $selected_branch_id ? esc_attr($selected_branch_id) : ''; ?>">
                         <!-- Select je disabled, pouze pro zobrazení -->
-                        <select id="branch_id" class="saw-input" disabled style="background-color: #f0f0f1; cursor: not-allowed;" aria-label="<?php echo esc_attr($tr('form_branch', 'Pobočka')); ?>">
+                        <select id="branch_id" class="sa-input" disabled style="background-color: #f0f0f1; cursor: not-allowed;" aria-label="<?php echo esc_attr($tr('form_branch', 'Pobočka')); ?>">
                             <option value="">-- <?php echo $tr('form_select_branch', 'Vyberte pobočku'); ?> --</option>
                             <?php foreach ($branches as $branch_id => $branch_name): ?>
                                 <option value="<?php echo esc_attr($branch_id); ?>" <?php selected($selected_branch_id, $branch_id); ?>>
@@ -322,7 +309,7 @@ $form_action = $is_edit
                             <?php endforeach; ?>
                         </select>
                         <?php if ($selected_branch_id): ?>
-                            <p class="saw-field-hint" style="margin-top: 4px; font-size: 13px; color: #646970; display: flex; align-items: center; gap: 6px;">
+                            <p class="sa-form-hint" style="margin-top: 4px; font-size: 13px; color: #646970; display: flex; align-items: center; gap: 6px;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -335,30 +322,28 @@ $form_action = $is_edit
                 </div>
                 
                 <!-- ⭐ NEW: Physical vs Legal Person Radio - Styled Toggle -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label class="saw-label saw-required"><?php echo $tr('form_visitor_type', 'Typ návštěvníka'); ?></label>
-                        <div class="saw-visitor-type-toggle" style="display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;">
-                            <label class="saw-radio-toggle" style="flex: 1; min-width: 200px; position: relative; cursor: pointer;">
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label class="sa-form-label sa-form-label--required"><?php echo $tr('form_visitor_type', 'Typ návštěvníka'); ?></label>
+                        <div class="sa-visitor-type-toggle">
+                            <label class="sa-radio-toggle">
                                 <input type="radio" 
                                        name="has_company" 
                                        value="1" 
-                                       <?php checked($has_company, 1); ?>
-                                       style="position: absolute; opacity: 0; pointer-events: none;">
-                                <div class="saw-radio-toggle-content" style="padding: 16px; border: 2px solid #dcdcde; border-radius: 8px; transition: all 0.2s; background: #fff;">
-                                    <div style="font-weight: 600; margin-bottom: 4px; color: #1d2327; font-size: 15px;"><?php echo $tr('form_legal_person', 'Právnická osoba'); ?></div>
-                                    <div style="font-size: 13px; color: #646970;">Firma, instituce</div>
+                                       <?php checked($has_company, 1); ?>>
+                                <div class="sa-radio-toggle-content">
+                                    <div class="sa-radio-toggle-title"><?php echo $tr('form_legal_person', 'Právnická osoba'); ?></div>
+                                    <div class="sa-radio-toggle-subtitle">Firma, instituce</div>
                                 </div>
                             </label>
-                            <label class="saw-radio-toggle" style="flex: 1; min-width: 200px; position: relative; cursor: pointer;">
+                            <label class="sa-radio-toggle">
                                 <input type="radio" 
                                        name="has_company" 
                                        value="0" 
-                                       <?php checked($has_company, 0); ?>
-                                       style="position: absolute; opacity: 0; pointer-events: none;">
-                                <div class="saw-radio-toggle-content" style="padding: 16px; border: 2px solid #dcdcde; border-radius: 8px; transition: all 0.2s; background: #fff;">
-                                    <div style="font-weight: 600; margin-bottom: 4px; color: #1d2327; font-size: 15px;"><?php echo $tr('form_physical_person', 'Fyzická osoba'); ?></div>
-                                    <div style="font-size: 13px; color: #646970;">Soukromá osoba</div>
+                                       <?php checked($has_company, 0); ?>>
+                                <div class="sa-radio-toggle-content">
+                                    <div class="sa-radio-toggle-title"><?php echo $tr('form_physical_person', 'Fyzická osoba'); ?></div>
+                                    <div class="sa-radio-toggle-subtitle">Soukromá osoba</div>
                                 </div>
                             </label>
                         </div>
@@ -366,8 +351,8 @@ $form_action = $is_edit
                 </div>
                 
                 <!-- ⭐ Conditional Company Field -->
-                <div class="saw-form-row field-company-row" style="<?php echo $has_company ? '' : 'display: none;'; ?>">
-                    <div class="saw-form-group saw-col-12">
+                <div class="sa-form-row field-company-row" style="<?php echo $has_company ? '' : 'display: none;'; ?>">
+                    <div class="sa-form-group">
                         <?php
                         // ⭐ FIX: Use neutral field name to prevent browser autocomplete from recognizing it as "company"
                         // Backend will remap 'visit_company_selection' back to 'company_id'
@@ -393,18 +378,18 @@ $form_action = $is_edit
                 </div>
                 
                 <!-- Visit Type & Status -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="visit_type" class="saw-label saw-required"><?php echo $tr('form_visit_type', 'Typ návštěvy'); ?></label>
-                        <select name="visit_type" id="visit_type" class="saw-input" required>
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="visit_type" class="sa-form-label sa-form-label--required"><?php echo $tr('form_visit_type', 'Typ návštěvy'); ?></label>
+                        <select name="visit_type" id="visit_type" class="sa-input" required>
                             <option value="planned" <?php selected($item['visit_type'] ?? 'planned', 'planned'); ?>><?php echo $tr('type_planned', 'Plánovaná'); ?></option>
                             <option value="walk_in" <?php selected($item['visit_type'] ?? '', 'walk_in'); ?>><?php echo $tr('type_walk_in', 'Walk-in'); ?></option>
                         </select>
                     </div>
                     
-                    <div class="saw-form-group saw-col-6">
-                        <label for="status" class="saw-label saw-required"><?php echo $tr('form_status', 'Stav'); ?></label>
-                        <select name="status" id="status" class="saw-input" required>
+                    <div class="sa-form-group">
+                        <label for="status" class="sa-form-label sa-form-label--required"><?php echo $tr('form_status', 'Stav'); ?></label>
+                        <select name="status" id="status" class="sa-input" required>
                             <option value="draft" <?php selected($item['status'] ?? '', 'draft'); ?>><?php echo $tr('status_draft', 'Koncept'); ?></option>
                             <option value="pending" <?php selected($item['status'] ?? 'pending', 'pending'); ?>><?php echo $tr('status_pending', 'Čekající'); ?></option>
                             <option value="confirmed" <?php selected($item['status'] ?? '', 'confirmed'); ?>><?php echo $tr('status_confirmed', 'Potvrzená'); ?></option>
@@ -416,9 +401,9 @@ $form_action = $is_edit
                 </div>
                 
                 <!-- Schedule Days (Multi-day support) - IMPROVED LAYOUT -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label class="saw-label"><?php echo $tr('form_schedule_days', 'Dny návštěvy'); ?></label>
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label class="sa-form-label"><?php echo $tr('form_schedule_days', 'Dny návštěvy'); ?></label>
                         
                         <div id="visit-schedule-container" class="saw-schedule-container">
                             <?php
@@ -488,7 +473,7 @@ $form_action = $is_edit
                                                     <input type="date" 
                                                            name="schedule_dates[]" 
                                                            value="<?php echo esc_attr($schedule['date'] ?? ''); ?>" 
-                                                           class="saw-input saw-schedule-date-input"
+                                                           class="sa-input saw-schedule-date-input"
                                                            required>
                                                 </div>
                                             </div>
@@ -500,7 +485,7 @@ $form_action = $is_edit
                                                     <input type="time" 
                                                            name="schedule_times_from[]" 
                                                            value="<?php echo esc_attr($schedule['time_from'] ?? ''); ?>" 
-                                                           class="saw-input saw-schedule-time-input">
+                                                           class="sa-input saw-schedule-time-input">
                                                 </div>
                                                 
                                                 <div class="saw-schedule-field saw-schedule-time">
@@ -508,7 +493,7 @@ $form_action = $is_edit
                                                     <input type="time" 
                                                            name="schedule_times_to[]" 
                                                            value="<?php echo esc_attr($schedule['time_to'] ?? ''); ?>" 
-                                                           class="saw-input saw-schedule-time-input">
+                                                           class="sa-input saw-schedule-time-input">
                                                 </div>
                                             </div>
                                         </div>
@@ -519,7 +504,7 @@ $form_action = $is_edit
                                             <input type="text" 
                                                    name="schedule_notes[]" 
                                                    value="<?php echo esc_attr($schedule['notes'] ?? ''); ?>" 
-                                                   class="saw-input saw-schedule-notes-input"
+                                                   class="sa-input saw-schedule-notes-input"
                                                    placeholder="<?php echo esc_attr($tr('form_note_placeholder', 'Poznámka k danému dni')); ?>">
                                         </div>
                                     </div>
@@ -548,7 +533,7 @@ $form_action = $is_edit
                             <?php endforeach; ?>
                         </div>
                         
-                        <p class="saw-field-hint">
+                        <p class="sa-form-hint">
                             <?php echo $tr('form_schedule_hint', 'Přidejte jeden nebo více dnů, kdy návštěva proběhne. Každý den může mít různý čas.'); ?>
                         </p>
                     </div>
@@ -591,7 +576,7 @@ $form_action = $is_edit
                                 </svg>
                             </div>
                             <p><?php echo esc_html($tr('visitors_empty', 'Zatím nebyli přidáni žádní návštěvníci')); ?></p>
-                            <p class="saw-text-muted"><?php echo esc_html($tr('visitors_empty_hint', 'Klikněte na tlačítko "Přidat návštěvníka" výše')); ?></p>
+                            <p class="sa-text-muted"><?php echo esc_html($tr('visitors_empty_hint', 'Klikněte na tlačítko "Přidat návštěvníka" výše')); ?></p>
                         </div>
                         
                         <!-- Seznam karet (plní JS) -->
@@ -613,26 +598,34 @@ $form_action = $is_edit
                     <input type="hidden" name="visitors_json" id="visitors-json-input" value="[]">
                 </div>
                 
-                <!-- Invitation Email -->
-                <div class="saw-form-row" style="margin-top: 24px;">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="invitation_email" class="saw-label"><?php echo $tr('form_invitation_email', 'Email pro pozvánku'); ?></label>
-                        <input type="email" name="invitation_email" id="invitation_email" class="saw-input" value="<?php echo esc_attr($item['invitation_email'] ?? ''); ?>" placeholder="email@example.com">
+                <!-- Invitation Email - HIGHLIGHTED -->
+                <div class="sa-form-row saw-invitation-email-section" style="margin-top: 24px;">
+                    <div class="sa-form-group">
+                        <label for="invitation_email" class="sa-form-label">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            <?php echo $tr('form_invitation_email', 'Email pro pozvánku'); ?>
+                            <span class="saw-important-badge">Důležité</span>
+                        </label>
+                        <p class="saw-field-hint"><?php echo $tr('form_invitation_email_hint', 'Na tento email bude odeslána pozvánka s instrukcemi pro návštěvníka.'); ?></p>
+                        <input type="email" name="invitation_email" id="invitation_email" class="sa-input saw-important-input" value="<?php echo esc_attr($item['invitation_email'] ?? ''); ?>" placeholder="email@example.com">
                     </div>
                 </div>
                 
                 <!-- Purpose -->
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="purpose" class="saw-label"><?php echo $tr('form_purpose', 'Účel návštěvy'); ?></label>
-                        <textarea name="purpose" id="purpose" class="saw-input" rows="3" placeholder="<?php echo esc_attr($tr('form_purpose_placeholder', 'Stručný popis účelu návštěvy...')); ?>"><?php echo esc_textarea($item['purpose'] ?? ''); ?></textarea>
+                <div class="sa-form-row">
+                    <div class="sa-form-group">
+                        <label for="purpose" class="sa-form-label"><?php echo $tr('form_purpose', 'Účel návštěvy'); ?></label>
+                        <textarea name="purpose" id="purpose" class="sa-input" rows="3" placeholder="<?php echo esc_attr($tr('form_purpose_placeholder', 'Stručný popis účelu návštěvy...')); ?>"><?php echo esc_textarea($item['purpose'] ?? ''); ?></textarea>
                     </div>
                 </div>
                 
                 <!-- Hosts (loaded via AJAX when branch changes) -->
-                <div class="saw-form-row field-hosts-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label class="saw-label saw-required">
+                <div class="sa-form-row field-hosts-row">
+                    <div class="sa-form-group">
+                        <label class="sa-form-label sa-form-label--required">
                             <?php echo $tr('form_hosts', 'Koho navštěvují'); ?>
                             <span id="host-counter" class="saw-badge saw-badge-primary" style="display: inline-block; margin-left: 12px;">
                                 <span id="host-selected">0</span> / <span id="host-total">0</span>
@@ -640,7 +633,7 @@ $form_action = $is_edit
                         </label>
                         
                         <div class="saw-host-controls" style="display: none; margin-bottom: 12px; gap: 12px; align-items: center;">
-                            <input type="text" id="host-search" class="saw-input" placeholder="🔍 <?php echo esc_attr($tr('form_hosts_search', 'Hledat uživatele...')); ?>" style="flex: 1; max-width: 300px;">
+                            <input type="text" id="host-search" class="sa-input" placeholder="🔍 <?php echo esc_attr($tr('form_hosts_search', 'Hledat uživatele...')); ?>" style="flex: 1; max-width: 300px;">
                             <label style="display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; user-select: none;">
                                 <input type="checkbox" id="select-all-host" style="margin: 0; cursor: pointer;">
                                 <span style="font-weight: 600; color: #2c3338;"><?php echo $tr('form_select_all', 'Vybrat vše'); ?></span>
@@ -649,7 +642,7 @@ $form_action = $is_edit
                         
                         <div id="hosts-list" style="border: 2px solid #dcdcde; border-radius: 6px; max-height: 320px; overflow-y: auto; background: #fff;">
                             <?php if ($selected_branch_id): ?>
-                                <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
+                                <p class="sa-text-muted" style="padding: 20px; margin: 0; text-align: center;">
                                     <?php if (class_exists('SAW_Icons')): ?>
                                         <span style="animation: rotation 1s infinite linear; display: inline-block;"><?php echo SAW_Icons::get('refresh-cw'); ?></span>
                                     <?php else: ?>
@@ -658,7 +651,7 @@ $form_action = $is_edit
                                     Načítám uživatele...
                                 </p>
                             <?php else: ?>
-                                <p class="saw-text-muted" style="padding: 20px; margin: 0; text-align: center;">
+                                <p class="sa-text-muted" style="padding: 20px; margin: 0; text-align: center;">
                                     <?php echo $tr('form_select_branch_first', 'Nejprve vyberte pobočku výše'); ?>
                                 </p>
                             <?php endif; ?>
@@ -672,7 +665,7 @@ $form_action = $is_edit
         <!-- ================================================
              SPECIFICKÉ INFORMACE PRO AKCI
              ================================================ -->
-        <details class="saw-form-section saw-form-section-action-info" <?php echo $has_action_data ? 'open' : ''; ?>>
+        <details class="sa-form-section sa-form-section-action-info" <?php echo $has_action_data ? 'open' : ''; ?>>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
                     <?php echo SAW_Icons::get('alert-triangle'); ?>
@@ -681,7 +674,7 @@ $form_action = $is_edit
                 <?php endif; ?>
                 <strong><?php echo esc_html($tr('section_action_info', 'Specifické informace pro akci')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
                 <p class="saw-help-text" style="margin-bottom: 16px; color: #6b7280;">
                     <?php echo esc_html($tr('help_action_info', 'Pokyny, dokumenty a OOPP, které návštěvníci uvidí NAVÍC k běžnému školení a vztahují se výhradně k této návštěvě.')); ?>
@@ -732,9 +725,9 @@ $form_action = $is_edit
                         >
                             
                             <!-- Název akce -->
-                            <div class="saw-form-row">
-                                <div class="saw-form-group saw-col-12">
-                                    <label for="action_name_<?php echo esc_attr($lang_code); ?>" class="saw-label <?php echo $index === $active_lang_index ? 'saw-required' : ''; ?>">
+                            <div class="sa-form-row">
+                                <div class="sa-form-group">
+                                    <label for="action_name_<?php echo esc_attr($lang_code); ?>" class="sa-form-label <?php echo $index === $active_lang_index ? 'saw-required' : ''; ?>">
                                         <?php echo esc_html($tr('field_action_name', 'Název akce')); ?>
                                         <?php if ($index === $active_lang_index): ?>
                                             <span class="saw-required-marker">*</span>
@@ -743,7 +736,7 @@ $form_action = $is_edit
                                     <input type="text" 
                                            name="action_info_translations[<?php echo esc_attr($lang_code); ?>][name]" 
                                            id="action_name_<?php echo esc_attr($lang_code); ?>" 
-                                           class="saw-input" 
+                                           class="sa-input" 
                                            value="<?php echo esc_attr($lang_trans['name'] ?? ''); ?>" 
                                            placeholder="<?php echo esc_attr($tr('placeholder_action_name', 'např. Dláždění parkoviště, Revize elektro...')); ?>"
                                            <?php echo $index === $active_lang_index ? 'required' : ''; ?>>
@@ -754,15 +747,15 @@ $form_action = $is_edit
                             </div>
                             
                             <!-- Popis akce -->
-                            <div class="saw-form-row" style="margin-top: 16px;">
-                                <div class="saw-form-group saw-col-12">
-                                    <label for="action_description_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                            <div class="sa-form-row" style="margin-top: 16px;">
+                                <div class="sa-form-group">
+                                    <label for="action_description_<?php echo esc_attr($lang_code); ?>" class="sa-form-label">
                                         <?php echo esc_html($tr('field_action_description', 'Popis akce')); ?>
                                     </label>
                                     <textarea 
                                         name="action_info_translations[<?php echo esc_attr($lang_code); ?>][description]" 
                                         id="action_description_<?php echo esc_attr($lang_code); ?>" 
-                                        class="saw-input" 
+                                        class="sa-input" 
                                         rows="3"
                                         placeholder="<?php echo esc_attr($tr('placeholder_action_description', 'Krátký popis, co se bude na akci dít...')); ?>"><?php echo esc_textarea($lang_trans['description'] ?? ''); ?></textarea>
                                     <p class="saw-help-text">
@@ -772,9 +765,9 @@ $form_action = $is_edit
                             </div>
                             
                             <!-- Specifické pokyny (WYSIWYG) -->
-                            <div class="saw-form-row" style="margin-top: 16px;">
-                                <div class="saw-form-group saw-col-12">
-                                    <label for="action_content_text_<?php echo esc_attr($lang_code); ?>" class="saw-label">
+                            <div class="sa-form-row" style="margin-top: 16px;">
+                                <div class="sa-form-group">
+                                    <label for="action_content_text_<?php echo esc_attr($lang_code); ?>" class="sa-form-label">
                                         <?php echo esc_html($tr('field_action_content', 'Specifické pokyny')); ?>
                                     </label>
                                     <?php
@@ -807,9 +800,9 @@ $form_action = $is_edit
                 <div class="saw-action-info-content" style="margin-top: 24px;">
                     
                     <!-- Dokumenty k akci -->
-                    <div class="saw-form-row" style="margin-top: 24px;">
-                        <div class="saw-form-group saw-col-12">
-                            <label class="saw-label">
+                    <div class="sa-form-row" style="margin-top: 24px;">
+                        <div class="sa-form-group">
+                            <label class="sa-form-label">
                                 <?php if (class_exists('SAW_Icons')): ?>
                                     <span style="display: inline-flex; align-items: center; margin-right: 6px; color: var(--saw-warning);"><?php echo SAW_Icons::get('file-text', 'saw-icon--md'); ?></span>
                                 <?php else: ?>
@@ -858,9 +851,9 @@ $form_action = $is_edit
                     </div>
                     
                     <!-- OOPP pro akci -->
-                    <div class="saw-form-row" style="margin-top: 24px;">
-                        <div class="saw-form-group saw-col-12">
-                            <label class="saw-label">
+                    <div class="sa-form-row" style="margin-top: 24px;">
+                        <div class="sa-form-group">
+                            <label class="sa-form-label">
                                 <?php if (class_exists('SAW_Icons')): ?>
                                     <span style="display: inline-flex; align-items: center; margin-right: 6px; color: var(--saw-warning);"><?php echo SAW_Icons::get('shield', 'saw-icon--md'); ?></span>
                                 <?php else: ?>
@@ -1012,12 +1005,11 @@ $form_action = $is_edit
              ================================================ -->
         <div id="visitor-nested-form" class="saw-nested-form" style="display: none;">
             <div class="saw-nested-form-header">
-                <button type="button" class="saw-btn-back" id="btn-visitor-back">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <button type="button" class="saw-btn-back" id="btn-visitor-back" title="<?php echo esc_attr($tr('btn_back', 'Zpět')); ?>">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12"></line>
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
-                    <?php echo esc_html($tr('btn_back', 'Zpět')); ?>
                 </button>
                 <h4 id="visitor-form-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1030,28 +1022,28 @@ $form_action = $is_edit
             
             <div class="saw-nested-form-body">
                 <!-- Jméno a Příjmení - 2 sloupce -->
-                <div class="saw-form-row-group">
-                    <div class="saw-form-row">
-                        <label for="visitor-first-name" class="saw-label">
+                <div class="sa-form-row-group">
+                    <div class="sa-form-row">
+                        <label for="visitor-first-name" class="sa-form-label">
                             <?php echo esc_html($tr('field_first_name', 'Jméno')); ?>
                             <span class="required">*</span>
                         </label>
                         <input type="text" 
                                id="visitor-first-name" 
-                               class="saw-input" 
+                               class="sa-input" 
                                placeholder="<?php echo esc_attr($tr('placeholder_first_name', 'Zadejte jméno')); ?>"
                                maxlength="100"
                                autocomplete="off">
                     </div>
                     
-                    <div class="saw-form-row">
-                        <label for="visitor-last-name" class="saw-label">
+                    <div class="sa-form-row">
+                        <label for="visitor-last-name" class="sa-form-label">
                             <?php echo esc_html($tr('field_last_name', 'Příjmení')); ?>
                             <span class="required">*</span>
                         </label>
                         <input type="text" 
                                id="visitor-last-name" 
-                               class="saw-input" 
+                               class="sa-input" 
                                placeholder="<?php echo esc_attr($tr('placeholder_last_name', 'Zadejte příjmení')); ?>"
                                maxlength="100"
                                autocomplete="off">
@@ -1059,35 +1051,35 @@ $form_action = $is_edit
                 </div>
                 
                 <!-- Email -->
-                <div class="saw-form-row">
-                    <label for="visitor-email" class="saw-label">
+                <div class="sa-form-row">
+                    <label for="visitor-email" class="sa-form-label">
                         <?php echo esc_html($tr('field_email', 'Email')); ?>
                     </label>
                     <input type="email" 
                            id="visitor-email" 
-                           class="saw-input" 
+                           class="sa-input" 
                            maxlength="255">
                 </div>
                 
                 <!-- Telefon -->
-                <div class="saw-form-row">
-                    <label for="visitor-phone" class="saw-label">
+                <div class="sa-form-row">
+                    <label for="visitor-phone" class="sa-form-label">
                         <?php echo esc_html($tr('field_phone', 'Telefon')); ?>
                     </label>
                     <input type="tel" 
                            id="visitor-phone" 
-                           class="saw-input" 
+                           class="sa-input" 
                            maxlength="50">
                 </div>
                 
                 <!-- Pozice -->
-                <div class="saw-form-row">
-                    <label for="visitor-position" class="saw-label">
+                <div class="sa-form-row">
+                    <label for="visitor-position" class="sa-form-label">
                         <?php echo esc_html($tr('field_position', 'Pozice / Funkce')); ?>
                     </label>
                     <input type="text" 
                            id="visitor-position" 
-                           class="saw-input" 
+                           class="sa-input" 
                            maxlength="100">
                 </div>
             </div>
@@ -1307,10 +1299,10 @@ jQuery(document).ready(function($) {
     // LANGUAGE TABS FOR ACTION INFO
     // ========================================
     
-    var $actionTabsContainer = $('.saw-form-section-action-info .saw-language-tabs');
-    var $actionTabs = $('.saw-form-section-action-info .saw-language-tab');
-    var $actionPrevBtn = $('.saw-form-section-action-info .saw-language-tab-nav-prev');
-    var $actionNextBtn = $('.saw-form-section-action-info .saw-language-tab-nav-next');
+    var $actionTabsContainer = $('.sa-form-section-action-info .saw-language-tabs');
+    var $actionTabs = $('.sa-form-section-action-info .saw-language-tab');
+    var $actionPrevBtn = $('.sa-form-section-action-info .saw-language-tab-nav-prev');
+    var $actionNextBtn = $('.sa-form-section-action-info .saw-language-tab-nav-next');
     
     if ($actionTabsContainer.length) {
         function updateActionNavButtons() {
@@ -1360,7 +1352,7 @@ jQuery(document).ready(function($) {
             $tab.addClass('active');
             
             // Hide all content and remove required from all inputs
-            $('.saw-form-section-action-info .saw-language-content').each(function() {
+            $('.sa-form-section-action-info .saw-language-content').each(function() {
                 $(this).hide();
                 $(this).find('input[type="text"], textarea').removeAttr('required');
                 $(this).find('label').removeClass('saw-required');
@@ -1368,14 +1360,14 @@ jQuery(document).ready(function($) {
             });
             
             // Show target content and add required to first input
-            var $targetContent = $('.saw-form-section-action-info .saw-language-content[data-tab-content="' + targetTab + '"]');
+            var $targetContent = $('.sa-form-section-action-info .saw-language-content[data-tab-content="' + targetTab + '"]');
             $targetContent.show();
             var $firstInput = $targetContent.find('input[name*="[name]"]').first();
             if ($firstInput.length) {
                 $firstInput.attr('required', 'required');
-                $firstInput.closest('.saw-form-group').find('label').addClass('saw-required');
-                if (!$firstInput.closest('.saw-form-group').find('.saw-required-marker').length) {
-                    $firstInput.closest('.saw-form-group').find('label').append('<span class="saw-required-marker">*</span>');
+                $firstInput.closest('.sa-form-group').find('label').addClass('saw-required');
+                if (!$firstInput.closest('.sa-form-group').find('.saw-required-marker').length) {
+                    $firstInput.closest('.sa-form-group').find('label').append('<span class="saw-required-marker">*</span>');
                 }
             }
             
@@ -1402,7 +1394,7 @@ jQuery(document).ready(function($) {
     // ========================================
     // OOPP SELECTOR FOR ACTION INFO
     // ========================================
-    $(document).on('click', '.saw-form-section-action-info .saw-add-oopp', function(e) {
+    $(document).on('click', '.sa-form-section-action-info .saw-add-oopp', function(e) {
         e.preventDefault();
         var $item = $(this).closest('.saw-oopp-item');
         var ooppId = $item.data('id');
@@ -1447,7 +1439,7 @@ jQuery(document).ready(function($) {
         $item.remove();
     });
     
-    $(document).on('click', '.saw-form-section-action-info .saw-remove-oopp', function(e) {
+    $(document).on('click', '.sa-form-section-action-info .saw-remove-oopp', function(e) {
         e.preventDefault();
         var $item = $(this).closest('.saw-oopp-item');
         var ooppId = $item.data('id');
@@ -1494,7 +1486,7 @@ jQuery(document).ready(function($) {
     // INITIALIZE ACTIVE LANGUAGE ON SECTION OPEN
     // ========================================
     function initializeActiveLanguage() {
-        var $section = $('.saw-form-section-action-info');
+        var $section = $('.sa-form-section-action-info');
         if ($section.length && ($section.prop('open') || $section.attr('open'))) {
             var $activeTab = $section.find('.saw-language-tab.active');
             if ($activeTab.length) {
@@ -1506,9 +1498,9 @@ jQuery(document).ready(function($) {
                 var $firstInput = $targetContent.find('input[name*="[name]"]').first();
                 if ($firstInput.length) {
                     $firstInput.attr('required', 'required');
-                    $firstInput.closest('.saw-form-group').find('label').addClass('saw-required');
-                    if (!$firstInput.closest('.saw-form-group').find('.saw-required-marker').length) {
-                        $firstInput.closest('.saw-form-group').find('label').append('<span class="saw-required-marker">*</span>');
+                    $firstInput.closest('.sa-form-group').find('label').addClass('saw-required');
+                    if (!$firstInput.closest('.sa-form-group').find('.saw-required-marker').length) {
+                        $firstInput.closest('.sa-form-group').find('label').append('<span class="saw-required-marker">*</span>');
                     }
                 }
             }
@@ -1524,7 +1516,7 @@ jQuery(document).ready(function($) {
         
         // Inicializace TinyMCE editorů pro action info
         if (typeof wp !== 'undefined' && wp.editor && wp.editor.initialize) {
-            $('.saw-form-section-action-info textarea.wp-editor-area').each(function() {
+            $('.sa-form-section-action-info textarea.wp-editor-area').each(function() {
                 var editorId = $(this).attr('id');
                 if (editorId && !tinyMCE.get(editorId)) {
                     // Počkat, až bude DOM připraven
@@ -1557,7 +1549,7 @@ jQuery(document).ready(function($) {
     
     // Helper function to sync required attributes with details open state
     function syncRequiredAttributesForDetails() {
-        $('details.saw-form-section').each(function() {
+        $('details.sa-form-section').each(function() {
             var $details = $(this);
             var isOpen = $details.prop('open');
             
@@ -1569,7 +1561,7 @@ jQuery(document).ready(function($) {
     }
     
     // Inicializace při otevření sekce
-    $('.saw-form-section-action-info').on('toggle', function() {
+    $('.sa-form-section-action-info').on('toggle', function() {
         var $section = $(this);
         var isOpen = $section.prop('open');
         
@@ -1585,7 +1577,7 @@ jQuery(document).ready(function($) {
                 
                 // Znovu inicializovat TinyMCE po otevření sekce
                 if (typeof wp !== 'undefined' && wp.editor && wp.editor.initialize) {
-                    $('.saw-form-section-action-info textarea.wp-editor-area').each(function() {
+                    $('.sa-form-section-action-info textarea.wp-editor-area').each(function() {
                         var editorId = $(this).attr('id');
                         if (editorId && !tinyMCE.get(editorId)) {
                             setTimeout(function() {
@@ -1613,7 +1605,7 @@ jQuery(document).ready(function($) {
     });
     
     // Sync required attributes for ALL details sections on toggle
-    $(document).on('toggle', 'details.saw-form-section', function() {
+    $(document).on('toggle', 'details.sa-form-section', function() {
         var $details = $(this);
         var isOpen = $details.prop('open');
         

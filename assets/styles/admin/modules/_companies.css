@@ -99,6 +99,168 @@
     overflow: hidden;
 }
 
+/* ===== COLLAPSED HEADER (always visible) ===== */
+.bento-merge-collapsed-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-radius: var(--bento-card-radius, 20px);
+}
+
+.bento-merge-collapsed-header:hover {
+    background: var(--saw-bg-tertiary);
+}
+
+.bento-merge-collapsed-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-primary-light);
+    color: var(--saw-primary);
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.bento-merge-collapsed-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.bento-merge-collapsed-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--saw-text-primary);
+}
+
+.bento-merge-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: var(--saw-danger);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.bento-merge-badge--pulse {
+    animation: mergeBadgePulse 2s ease-in-out infinite;
+}
+
+@keyframes mergeBadgePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+    }
+}
+
+.bento-merge-chevron {
+    width: 20px;
+    height: 20px;
+    color: var(--saw-text-muted);
+    transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bento-merge-chevron svg {
+    width: 16px;
+    height: 16px;
+}
+
+.bento-merge[data-collapsed="false"] .bento-merge-chevron {
+    transform: rotate(180deg);
+}
+
+/* ===== DUPLICATE ALERT (shown when duplicates found) ===== */
+.bento-merge-alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 8px 16px 12px 16px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.08) 100%);
+    border: 1px solid var(--saw-warning);
+    border-left: 4px solid var(--saw-warning);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bento-merge-alert:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(251, 191, 36, 0.12) 100%);
+    transform: translateX(4px);
+}
+
+.bento-merge-alert-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-warning);
+    border-radius: 50%;
+    color: #fff;
+    flex-shrink: 0;
+    animation: alertPulse 2s ease-in-out infinite;
+}
+
+.bento-merge-alert-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+@keyframes alertPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.bento-merge-alert-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.bento-merge-alert-content strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--saw-warning-dark, #92400e);
+    margin-bottom: 2px;
+}
+
+.bento-merge-alert-content p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--saw-text-secondary);
+}
+
+/* ===== EXPANDABLE CONTENT ===== */
+.bento-merge-expandable {
+    border-top: 1px solid var(--saw-border-color);
+}
+
 /* Warning Box */
 .bento-merge-warning {
     display: flex;

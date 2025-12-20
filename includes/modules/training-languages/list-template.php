@@ -108,7 +108,7 @@ $table_config['columns'] = array(
         'width' => '8%',   // Vlajka je malá
         'align' => 'center',
         'callback' => function($value) {
-            return '<span style="font-size: 24px;">' . esc_html($value) . '</span>';
+            return '<span class="sa-table-flag-emoji">' . esc_html($value) . '</span>';
         }
     ),
     'language_name' => array(
@@ -120,7 +120,7 @@ $table_config['columns'] = array(
         'callback' => function($value, $item) use ($tr) {
             $html = esc_html($value);
             if (($item['language_code'] ?? '') === 'cs') {
-                $html .= ' <span class="saw-badge saw-badge-info">' . esc_html($tr('badge_required', 'Povinný')) . '</span>';
+                $html .= ' <span class="sa-badge sa-badge--info">' . esc_html($tr('badge_required', 'Povinný')) . '</span>';
             }
             return $html;
         }
@@ -132,7 +132,7 @@ $table_config['columns'] = array(
         'align' => 'center',
         'sortable' => true,
         'callback' => function($value) {
-            return '<code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:600; color:#475569;">' . esc_html(strtoupper($value)) . '</code>';
+            return '<span class="sa-code-badge">' . esc_html(strtoupper($value)) . '</span>';
         }
     ),
     'branches_count' => array(
@@ -143,9 +143,9 @@ $table_config['columns'] = array(
         'callback' => function($value) {
             $count = intval($value);
             if ($count > 0) {
-                return '<span class="saw-badge saw-badge-success">' . $count . '</span>';
+                return '<span class="sa-badge sa-badge--success">' . $count . '</span>';
             } else {
-                return '<span class="saw-text-muted" style="color:#cbd5e1;">—</span>';
+                return '<span class="sa-text-muted">—</span>';
             }
         }
     ),

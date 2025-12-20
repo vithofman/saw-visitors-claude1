@@ -103,7 +103,8 @@ $icon_name = $icon_map[$icon_emoji] ?? 'clipboard-list';
 
 <?php 
 // Check if module uses Bento design system (for header hiding)
-$bento_enabled_modules = ['branches', 'companies'];
+// Include both underscore and hyphen variants to handle entity vs slug naming
+$bento_enabled_modules = ['branches', 'companies', 'training_languages', 'training-languages', 'translations', 'visits'];
 $is_bento_module = in_array($entity, $bento_enabled_modules) && function_exists('saw_bento');
 $bento_class = $is_bento_module ? ' bento-active' : '';
 ?>
@@ -184,7 +185,7 @@ $bento_class = $is_bento_module ? ' bento-active' : '';
         
         <?php 
         // Check if module uses Bento design system
-        $bento_modules = ['branches', 'companies']; // Modules with Bento design
+        $bento_modules = ['branches', 'companies', 'training_languages', 'training-languages', 'translations', 'visits']; // Modules with Bento design
         $use_bento = in_array($entity, $bento_modules) && function_exists('saw_bento');
         ?>
         

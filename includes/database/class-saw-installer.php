@@ -608,6 +608,11 @@ class SAW_Installer {
         self::add_action_name_to_visits();
         self::add_is_global_to_oopp();
         self::create_action_tables();
+        
+        // ============================================
+        // COMPANY LOGO MIGRATION
+        // ============================================
+        self::add_logo_url_to_companies();
     }
     
     /**
@@ -917,6 +922,40 @@ class SAW_Installer {
             $wpdb->query("ALTER TABLE {$table_name} 
                 ADD INDEX idx_branch (branch_id)");
             error_log("[SAW Installer] Added idx_branch index to audit_log table");
+        }
+    }
+    
+    /**
+     * Add logo_url column to companies table
+     * 
+     * @since 1.0.0
+     * @return void
+     */
+    private static function add_logo_url_to_companies() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'saw_';
+        
+        if (!self::table_exists('companies')) {
+            return;
+        }
+        
+        $companies_table = $prefix . 'companies';
+        $column_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+             WHERE TABLE_SCHEMA = %s 
+             AND TABLE_NAME = %s 
+             AND COLUMN_NAME = 'logo_url'",
+            DB_NAME,
+            $companies_table
+        ));
+        
+        if (!$column_exists) {
+            $wpdb->query("ALTER TABLE {$companies_table} 
+                ADD COLUMN logo_url VARCHAR(500) NULL 
+                COMMENT 'URL loga firmy'
+                AFTER notes");
+            
+            error_log("[SAW Installer] Added logo_url column to companies table");
         }
     }
     

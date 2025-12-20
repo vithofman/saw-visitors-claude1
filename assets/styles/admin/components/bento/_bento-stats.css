@@ -115,7 +115,7 @@ a.bento-stat:hover {
     .bento-stat-value {
         font-size: 1.75rem;
     }
-    
+
     .bento-stat-icon {
         width: 36px;
         height: 36px;
@@ -123,3 +123,48 @@ a.bento-stat:hover {
     }
 }
 
+/* ===== MOBILE COMPACT STATS IN SIDEBAR ===== */
+@media (max-width: 768px) {
+
+    /* Ultra-compact stats for 3-column layout in sidebar */
+    .sa-sidebar .bento-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 4px;
+        min-width: 0;
+    }
+
+    .sa-sidebar .bento-stat-icon {
+        width: 24px;
+        height: 24px;
+        margin: 0 auto 4px auto;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative;
+    }
+
+    .sa-sidebar .bento-stat-icon svg,
+    .sa-sidebar .bento-stat-icon .saw-icon {
+        width: 12px !important;
+        height: 12px !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
+
+    .sa-sidebar .bento-stat-value {
+        font-size: 1.125rem;
+        margin-bottom: 2px;
+        line-height: 1;
+    }
+
+    .sa-sidebar .bento-stat-label {
+        font-size: 0.5rem;
+        letter-spacing: 0;
+        text-align: center;
+    }
+}

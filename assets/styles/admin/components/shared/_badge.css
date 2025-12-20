@@ -42,6 +42,18 @@
     color: var(--saw-gray-700);
 }
 
+/* Primary - for "in_progress" status */
+.sa-badge--primary {
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+}
+
+/* Secondary - for "draft" and muted states */
+.sa-badge--secondary {
+    background: var(--saw-gray-100, #f1f5f9);
+    color: var(--saw-gray-600, #64748b);
+}
+
 /* Count badge (in tabs) */
 .sa-badge--count {
     padding: 2px 8px;
@@ -58,8 +70,14 @@
     border-radius: 50%;
 }
 
-.sa-badge--dot.sa-badge--success { background: var(--saw-success); }
-.sa-badge--dot.sa-badge--danger { background: var(--saw-danger); }
-.sa-badge--dot.sa-badge--warning { background: var(--saw-warning); }
+.sa-badge--dot.sa-badge--success {
+    background: var(--saw-success);
+}
 
+.sa-badge--dot.sa-badge--danger {
+    background: var(--saw-danger);
+}
 
+.sa-badge--dot.sa-badge--warning {
+    background: var(--saw-warning);
+}

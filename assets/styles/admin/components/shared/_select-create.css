@@ -1,0 +1,257 @@
+/**
+ * SAW Admin - Select-Create Component Styles
+ * 
+ * Searchable dropdown with inline create button
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   COMPONENT WRAPPER
+   ============================================ */
+.saw-select-create-component {
+    width: 100%;
+}
+
+.saw-select-create-wrapper {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   SEARCH INPUT
+   ============================================ */
+.saw-select-search-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 2px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    background: var(--saw-bg-elevated, #ffffff);
+    color: var(--saw-text-primary, #1e293b);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.saw-select-search-input:focus {
+    outline: none;
+    border-color: var(--saw-brand-500, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.saw-select-search-input::placeholder {
+    color: var(--saw-text-muted, #94a3b8);
+}
+
+/* ============================================
+   DROPDOWN CONTAINER
+   ============================================ */
+.saw-select-search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 2px solid var(--saw-border, #e2e8f0);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+
+    /* Smooth scrolling */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* Custom scrollbar for dropdown */
+.saw-select-search-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar-thumb {
+    background: var(--saw-gray-300, #d1d5db);
+    border-radius: 10px;
+}
+
+.saw-select-search-dropdown::-webkit-scrollbar-thumb:hover {
+    background: var(--saw-brand-400, #60a5fa);
+}
+
+/* ============================================
+   DROPDOWN ITEMS
+   ============================================ */
+.saw-select-search-item {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--saw-text-primary, #1e293b);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    border-bottom: 1px solid var(--saw-border-light, #f1f5f9);
+}
+
+.saw-select-search-item:last-child {
+    border-bottom: none;
+}
+
+.saw-select-search-item:hover,
+.saw-select-search-item.highlighted {
+    background: var(--saw-brand-50, #eff6ff);
+    color: var(--saw-brand-700, #1d4ed8);
+}
+
+.saw-select-search-item.selected {
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+    font-weight: 500;
+    position: relative;
+}
+
+/* Checkmark for selected item */
+.saw-select-search-item.selected::after {
+    content: "✓";
+    position: absolute;
+    right: 16px;
+    color: var(--saw-brand-600, #2563eb);
+    font-weight: bold;
+}
+
+/* No results message */
+.saw-select-search-no-results {
+    padding: 16px;
+    text-align: center;
+    color: var(--saw-text-muted, #64748b);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* ============================================
+   INLINE CREATE BUTTON
+   ============================================ */
+.saw-inline-create-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--saw-brand-600, #2563eb) 0%, var(--saw-brand-500, #3b82f6) 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.saw-inline-create-btn:hover {
+    background: linear-gradient(135deg, var(--saw-brand-700, #1d4ed8) 0%, var(--saw-brand-600, #2563eb) 100%);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
+}
+
+.saw-inline-create-btn:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   RESPONSIVE: MOBILE
+   On mobile, show only + icon for the button
+   ============================================ */
+@media (max-width: 600px) {
+    .saw-select-create-wrapper {
+        gap: 8px;
+    }
+
+    /* Hide text, show only + icon */
+    .saw-inline-create-btn {
+        padding: 10px 12px;
+        min-width: 44px;
+        font-size: 0;
+        /* Hide text */
+    }
+
+    /* Plus icon via ::before pseudo-element */
+    .saw-inline-create-btn::before {
+        content: "+";
+        font-size: 20px;
+        font-weight: bold;
+        line-height: 1;
+    }
+
+    /* Dropdown takes full width minus button */
+    .saw-select-search-input {
+        width: calc(100% - 52px);
+    }
+}
+
+/* ============================================
+   SIDEBAR SPECIFIC ADJUSTMENTS
+   ============================================ */
+.sa-sidebar-content .saw-select-create-wrapper {
+    flex-wrap: nowrap;
+}
+
+.sa-sidebar-content .saw-select-search-input {
+    flex: 1 1 auto;
+}
+
+.sa-sidebar-content .saw-inline-create-btn {
+    flex: 0 0 auto;
+}
+
+/* Dropdown in sidebar - ensure proper z-index */
+.sa-sidebar-content .saw-select-search-dropdown {
+    z-index: 1100;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+[data-theme="dark"] .saw-select-search-input,
+.dark-mode .saw-select-search-input {
+    background: var(--saw-bg-surface, #1e293b);
+    border-color: var(--saw-border, #475569);
+    color: var(--saw-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .saw-select-search-dropdown,
+.dark-mode .saw-select-search-dropdown {
+    background: var(--saw-bg-elevated, #1e293b);
+    border-color: var(--saw-border, #475569);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .saw-select-search-item,
+.dark-mode .saw-select-search-item {
+    color: var(--saw-text-primary, #f1f5f9);
+    border-bottom-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-select-search-item:hover,
+.dark-mode .saw-select-search-item:hover,
+[data-theme="dark"] .saw-select-search-item.highlighted,
+.dark-mode .saw-select-search-item.highlighted {
+    background: var(--saw-brand-900, #1e3a8a);
+    color: var(--saw-brand-200, #bfdbfe);
+}
+
+[data-theme="dark"] .saw-select-search-item.selected,
+.dark-mode .saw-select-search-item.selected {
+    background: var(--saw-brand-800, #1e40af);
+    color: var(--saw-brand-100, #dbeafe);
+}

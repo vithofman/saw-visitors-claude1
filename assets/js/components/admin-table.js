@@ -199,7 +199,7 @@
         // Restore active row - ONLY on detail pages, NOT on list pages
         // On list pages without sidebar, we want to clear the active row highlighting
         const isDetailPage = window.location.pathname.split('/').filter(p => p && !isNaN(p)).length > 0;
-        
+
         if (state.activeRowId && isDetailPage) {
             setTimeout(function () {
                 updateActiveRow(state.activeRowId, true);
@@ -271,7 +271,7 @@
                 // No sidebar → safe to restore
                 console.log('📜 No sidebar, attempting restore');
                 restoreTableState(entity);
-                
+
                 // ===== CLEAR ACTIVE ROW WHEN SIDEBAR IS CLOSED =====
                 // When navigating back to list page (no sidebar), clear any previous row highlighting
                 clearActiveRow();
@@ -967,9 +967,21 @@
             }
 
             // CRITICAL: Check cache BEFORE any state changes
+            // ✅ FIX 2024-12-18: When page is cached, advance currentPage and try next page
             if (loadedPages.has(nextPage)) {
                 if (DEBUG) {
-                    console.log('✅ Page', nextPage, 'already cached, skipping');
+                    console.log('✅ Page', nextPage, 'already cached, advancing to next');
+                }
+                // Advance currentPage so next scroll trigger tries page 3, 4, etc.
+                currentPage = nextPage;
+                // Don't return - continue to check if we need to load the NEXT page
+                // But we need to recalculate nextPage
+                const realNextPage = currentPage + 1;
+                if (!loadedPages.has(realNextPage) && hasMore) {
+                    // There's a page after the cached one that needs loading
+                    // Let this function call continue but with adjusted page
+                    // Actually, just return and let next scroll trigger load it
+                    return;
                 }
                 return;
             }
@@ -1891,7 +1903,7 @@
         });
     }
 
-    
+
 
 
     $(document).ready(function () {

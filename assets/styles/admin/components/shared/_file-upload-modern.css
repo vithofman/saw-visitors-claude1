@@ -1,0 +1,704 @@
+/**
+ * File Upload Modern Component - CSS
+ * 
+ * Styling for the modern file upload component with drag & drop support.
+ * 
+ * @package     SAW_Visitors
+ * @subpackage  Components/FileUpload
+ * @version     1.0.0
+ */
+
+/* ============================================
+   FILE UPLOAD CONTAINER
+   ============================================ */
+.saw-file-upload-modern-container {
+    width: 100%;
+}
+
+.saw-file-upload-modern {
+    width: 100%;
+}
+
+/* ============================================
+   UPLOAD ZONE (Drop Area)
+   ============================================ */
+.saw-upload-zone {
+    border: 2px dashed var(--saw-border, #d1d5db);
+    border-radius: 12px;
+    background: var(--saw-bg-subtle, #f9fafb);
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.saw-upload-zone:hover {
+    border-color: var(--saw-brand-400, #60a5fa);
+    background: var(--saw-brand-50, #eff6ff);
+}
+
+.saw-upload-zone:focus {
+    border-color: var(--saw-brand-500, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.saw-upload-zone.dragging {
+    border-color: var(--saw-brand-500, #3b82f6);
+    background: var(--saw-brand-100, #dbeafe);
+    border-style: solid;
+}
+
+/* ============================================
+   UPLOAD ZONE CONTENT
+   ============================================ */
+.saw-upload-zone-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.saw-upload-zone-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.saw-upload-zone-row-main {
+    gap: 16px;
+}
+
+/* Upload icon - CRITICAL FIX for huge icons */
+.saw-upload-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--saw-brand-500, #3b82f6);
+    flex-shrink: 0;
+}
+
+.saw-upload-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Upload text */
+.saw-upload-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--saw-text-primary, #374151);
+}
+
+/* Upload button */
+.saw-upload-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--saw-brand-500, #3b82f6) 0%, var(--saw-brand-600, #2563eb) 100%);
+    color: #ffffff !important;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.saw-upload-button:hover {
+    background: linear-gradient(135deg, var(--saw-brand-600, #2563eb) 0%, var(--saw-brand-700, #1d4ed8) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Info icon */
+.saw-upload-info {
+    width: 20px;
+    height: 20px;
+    color: var(--saw-text-muted, #9ca3af);
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.saw-upload-info svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ============================================
+   CATEGORY SELECT ROW
+   ============================================ */
+.saw-upload-category-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--saw-border-light, #e5e7eb);
+    margin-top: 8px;
+}
+
+.saw-upload-category-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--saw-text-secondary, #6b7280);
+    white-space: nowrap;
+}
+
+.saw-category-select-wrapper {
+    flex: 1;
+    max-width: 250px;
+}
+
+.saw-category-select-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--saw-border, #d1d5db);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--saw-bg-elevated, #ffffff);
+    color: var(--saw-text-primary, #374151);
+}
+
+/* ============================================
+   FILE LIST
+   ============================================ */
+.saw-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.saw-file-list:empty {
+    display: none;
+}
+
+/* ============================================
+   FILE ITEM
+   ============================================ */
+.saw-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e5e7eb);
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.saw-file-item:hover {
+    border-color: var(--saw-border-hover, #d1d5db);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.saw-file-item.uploading {
+    border-color: var(--saw-brand-300, #93c5fd);
+    background: var(--saw-brand-50, #eff6ff);
+}
+
+.saw-file-item.success {
+    border-color: var(--saw-success-light, #86efac);
+    background: var(--saw-success-50, #f0fdf4);
+}
+
+.saw-file-item.error {
+    border-color: var(--saw-danger-light, #fca5a5);
+    background: var(--saw-danger-50, #fef2f2);
+}
+
+/* File icon */
+.saw-file-icon-container {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--saw-bg-subtle, #f3f4f6);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.saw-file-icon-container svg {
+    width: 24px;
+    height: 24px;
+    color: var(--saw-text-muted, #6b7280);
+}
+
+/* File info */
+.saw-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--saw-text-primary, #374151);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.saw-file-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.saw-file-size {
+    font-size: 12px;
+    color: var(--saw-text-muted, #9ca3af);
+}
+
+.saw-file-category {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* File status */
+.saw-file-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.saw-file-status svg {
+    width: 16px;
+    height: 16px;
+}
+
+.saw-file-status.uploading {
+    background: var(--saw-brand-100, #dbeafe);
+    color: var(--saw-brand-700, #1d4ed8);
+}
+
+.saw-file-status.uploading svg {
+    animation: saw-spin 1s linear infinite;
+}
+
+.saw-file-status.success {
+    background: var(--saw-success-100, #dcfce7);
+    color: var(--saw-success-700, #15803d);
+}
+
+.saw-file-status.error {
+    background: var(--saw-danger-100, #fee2e2);
+    color: var(--saw-danger-700, #b91c1c);
+}
+
+@keyframes saw-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* File actions */
+.saw-file-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-file-remove,
+.saw-file-retry {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--saw-border, #e5e7eb);
+    border-radius: 6px;
+    color: var(--saw-text-muted, #6b7280);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-file-remove svg,
+.saw-file-retry svg {
+    width: 16px;
+    height: 16px;
+}
+
+.saw-file-remove:hover {
+    background: var(--saw-danger-50, #fef2f2);
+    border-color: var(--saw-danger, #ef4444);
+    color: var(--saw-danger, #ef4444);
+}
+
+.saw-file-retry:hover {
+    background: var(--saw-brand-50, #eff6ff);
+    border-color: var(--saw-brand-500, #3b82f6);
+    color: var(--saw-brand-500, #3b82f6);
+}
+
+/* Progress bar */
+.saw-file-progress {
+    margin-top: 8px;
+    height: 4px;
+    background: var(--saw-border-light, #e5e7eb);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.saw-file-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--saw-brand-500, #3b82f6) 0%, var(--saw-brand-400, #60a5fa) 100%);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Status and info bars */
+.saw-status-bar,
+.saw-info-bar {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+.saw-status-bar {
+    background: var(--saw-warning-50, #fffbeb);
+    border: 1px solid var(--saw-warning-light, #fde68a);
+    color: var(--saw-warning-dark, #92400e);
+}
+
+.saw-info-bar {
+    background: var(--saw-brand-50, #eff6ff);
+    border: 1px solid var(--saw-brand-200, #bfdbfe);
+    color: var(--saw-brand-700, #1d4ed8);
+}
+
+/* Validation error */
+.saw-validation-error {
+    padding: 12px 16px;
+    background: var(--saw-danger-50, #fef2f2);
+    border: 1px solid var(--saw-danger-200, #fecaca);
+    border-radius: 8px;
+    color: var(--saw-danger-700, #b91c1c);
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .saw-upload-zone {
+        padding: 20px 16px;
+    }
+
+    .saw-upload-zone-row-main {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .saw-upload-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .saw-upload-text {
+        font-size: 14px;
+    }
+
+    .saw-upload-category-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .saw-category-select-wrapper {
+        max-width: none;
+    }
+
+    .saw-file-item {
+        flex-wrap: wrap;
+        padding: 12px;
+    }
+
+    .saw-file-info {
+        flex: 1 1 calc(100% - 60px);
+    }
+
+    .saw-file-status {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    .saw-file-actions {
+        order: 2;
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .saw-upload-zone {
+        padding: 16px 12px;
+    }
+
+    .saw-upload-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .saw-file-icon-container {
+        width: 36px;
+        height: 36px;
+    }
+
+    .saw-file-icon-container svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+[data-theme="dark"] .saw-upload-zone,
+.dark-mode .saw-upload-zone {
+    background: var(--saw-bg-elevated, #1e293b);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-upload-zone:hover,
+.dark-mode .saw-upload-zone:hover {
+    background: var(--saw-brand-900, #1e3a5f);
+    border-color: var(--saw-brand-500, #3b82f6);
+}
+
+[data-theme="dark"] .saw-upload-text,
+.dark-mode .saw-upload-text {
+    color: var(--saw-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .saw-file-item,
+.dark-mode .saw-file-item {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-file-item.uploading,
+.dark-mode .saw-file-item.uploading {
+    background: var(--saw-brand-900, #1e3a5f);
+    border-color: var(--saw-brand-400, #60a5fa);
+}
+
+[data-theme="dark"] .saw-file-item.success,
+.dark-mode .saw-file-item.success {
+    background: var(--saw-success-900, #052e16);
+    border-color: var(--saw-success, #22c55e);
+}
+
+[data-theme="dark"] .saw-file-item.error,
+.dark-mode .saw-file-item.error {
+    background: var(--saw-danger-900, #450a0a);
+    border-color: var(--saw-danger, #ef4444);
+}
+
+[data-theme="dark"] .saw-file-icon-container,
+.dark-mode .saw-file-icon-container {
+    background: var(--saw-bg-elevated, #1e293b);
+}
+
+[data-theme="dark"] .saw-file-name,
+.dark-mode .saw-file-name {
+    color: var(--saw-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .saw-file-remove,
+[data-theme="dark"] .saw-file-retry,
+.dark-mode .saw-file-remove,
+.dark-mode .saw-file-retry {
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-category-select-input,
+.dark-mode .saw-category-select-input {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+    color: var(--saw-text-primary, #f1f5f9);
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS - Fixed Position
+   ============================================ */
+.saw-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 999999 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 380px;
+    pointer-events: none;
+}
+
+.saw-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--saw-brand-500, #3b82f6);
+    animation: saw-toast-slide-in 0.3s ease;
+    pointer-events: auto;
+}
+
+.saw-toast.success {
+    border-left-color: var(--saw-success, #22c55e);
+}
+
+.saw-toast.error {
+    border-left-color: var(--saw-danger, #ef4444);
+}
+
+.saw-toast.removing {
+    animation: saw-toast-slide-out 0.3s ease forwards;
+}
+
+@keyframes saw-toast-slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes saw-toast-slide-out {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Toast icon - CRITICAL: Fixed size */
+.saw-toast-icon {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--saw-brand-500, #3b82f6);
+}
+
+.saw-toast-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+.saw-toast.success .saw-toast-icon {
+    color: var(--saw-success, #22c55e);
+}
+
+.saw-toast.error .saw-toast-icon {
+    color: var(--saw-danger, #ef4444);
+}
+
+/* Toast content */
+.saw-toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--saw-text-primary, #1e293b);
+    margin-bottom: 2px;
+}
+
+.saw-toast-message {
+    font-size: 13px;
+    color: var(--saw-text-secondary, #64748b);
+    word-wrap: break-word;
+}
+
+/* Toast close button */
+.saw-toast-close {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--saw-text-muted, #94a3b8);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.saw-toast-close:hover {
+    background: var(--saw-bg-subtle, #f1f5f9);
+    color: var(--saw-text-primary, #1e293b);
+}
+
+.saw-toast-close svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* Toast dark mode */
+[data-theme="dark"] .saw-toast,
+.dark-mode .saw-toast {
+    background: var(--saw-bg-elevated, #1e293b);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .saw-toast-title,
+.dark-mode .saw-toast-title {
+    color: var(--saw-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .saw-toast-message,
+.dark-mode .saw-toast-message {
+    color: var(--saw-text-secondary, #94a3b8);
+}
+
+/* Mobile toast */
+@media (max-width: 480px) {
+    .saw-toast-container {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}

@@ -201,6 +201,8 @@ class SAW_Asset_Loader {
             'components/shared/_spinner.css',
             'components/shared/_fab.css',
             'components/shared/_switchers.css',
+            'components/shared/_select-create.css',
+            'components/shared/_file-upload-modern.css',
             
             // 4. COMPONENTS - Data Table
             'components/data-table/_table-wrapper.css',
@@ -239,10 +241,15 @@ class SAW_Asset_Loader {
             'modules/_branches.css',
             'modules/_visitors.css',
             'modules/_visits.css',
+            'modules/_visits-form.css',
+            'modules/visits/_visits-sections.css',
+            'modules/visits/_visits-cards.css',
             'modules/_companies.css',
             'modules/_oopp.css',
             'modules/_content.css',
             'modules/_dashboard.css',
+            'modules/_training-languages.css',
+            'modules/_translations.css',
             
             // 6. UTILITIES
             'utilities/_display.css',

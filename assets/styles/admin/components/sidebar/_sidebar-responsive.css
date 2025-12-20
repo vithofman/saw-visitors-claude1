@@ -20,33 +20,33 @@
         bottom: var(--saw-bottom-nav-height, 52px) !important;
         top: 0 !important;
     }
-    
+
     .sa-sidebar--nested {
         width: 440px !important;
         max-width: calc(100% - 80px) !important;
     }
-    
+
     .sa-sidebar-header {
         padding: var(--saw-space-2) var(--saw-space-3);
         min-height: 56px;
         height: 56px;
     }
-    
+
     /* Reduced padding on tablet - content fills more sidebar width */
     .sa-sidebar-content {
         padding: 0 !important;
         padding-bottom: var(--saw-space-10, 40px) !important;
     }
-    
+
     .sa-detail-wrapper,
     .sa-detail-content-wrapper {
         padding: var(--saw-space-2) !important;
     }
-    
+
     .sa-form-section-content {
         padding: var(--saw-space-3) !important;
     }
-    
+
     .sa-sidebar-footer {
         padding: var(--saw-space-3);
     }
@@ -64,34 +64,41 @@
         bottom: var(--saw-bottom-nav-height-mobile, 48px) !important;
         top: 0 !important;
     }
-    
+
     .sa-sidebar--nested {
         width: 100% !important;
         max-width: 100% !important;
     }
-    
+
+    /* More compact header on mobile */
     .sa-sidebar-header {
-        padding: var(--saw-space-3);
-        min-height: 52px;
-        height: 52px;
+        padding: var(--saw-space-2, 8px) var(--saw-space-3, 12px);
+        min-height: 48px;
+        height: auto;
     }
-    
+
+    /* No padding on content for full-width bento header */
     .sa-sidebar-content {
-        padding: var(--saw-space-3);
+        padding: 0;
         /* Large padding at bottom for scrolling to last items */
         padding-bottom: var(--saw-space-12, 48px) !important;
     }
-    
+
+    /* Legacy detail wrapper needs some padding */
+    .sa-sidebar-content .sa-detail-wrapper:not(.bento-wrapper) {
+        padding: var(--saw-space-3, 12px);
+    }
+
     .sa-sidebar-footer {
         padding: var(--saw-space-3);
         flex-direction: column;
     }
-    
+
     .sa-sidebar-footer-actions {
         width: 100%;
         flex-direction: column;
     }
-    
+
     .sa-sidebar-footer-actions .sa-btn {
         width: 100%;
     }

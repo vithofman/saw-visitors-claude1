@@ -1,0 +1,1089 @@
+/**
+ * Visits Module - Cards CSS
+ * 
+ * Styles for visitor, invitation, purpose, notes, hosts, risks cards.
+ * Uses SA design system tokens.
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   DETAIL CARDS STACK
+   ============================================ */
+.sa-detail-cards-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* ============================================
+   VISITOR CARD
+   ============================================ */
+.sa-visitor-card {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-radius: 14px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-visitor-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.sa-visitor-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-visitor-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sa-visitor-icon-person {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #6366f1;
+}
+
+.sa-visitor-icon-company {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #d97706;
+}
+
+.sa-visitor-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.sa-visitor-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-visitor-card-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.sa-visitor-card-label>span:first-child {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-visitor-type-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.sa-type-person {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.sa-type-company {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.sa-visitor-card-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-visitor-type-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.sa-visitor-card-right {
+    flex-shrink: 0;
+}
+
+.sa-visitor-count-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.sa-visitor-count-box svg {
+    color: #64748b;
+}
+
+.sa-visitor-count-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.sa-visitor-count-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-visitor-card-inner,
+.dark-mode .sa-visitor-card-inner {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .sa-visitor-card-name,
+.dark-mode .sa-visitor-card-name {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .sa-visitor-count-box,
+.dark-mode .sa-visitor-count-box {
+    background: #334155;
+}
+
+[data-theme="dark"] .sa-visitor-count-number,
+.dark-mode .sa-visitor-count-number {
+    color: #f1f5f9;
+}
+
+/* ============================================
+   INVITATION CARD
+   ============================================ */
+.sa-invitation-card {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    border-radius: 14px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-invitation-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.sa-invitation-card-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-invitation-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0ea5e9;
+    flex-shrink: 0;
+}
+
+.sa-invitation-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.sa-invitation-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-invitation-card-label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.sa-invitation-card-label>span:first-child {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-invitation-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.sa-invitation-status-confirmed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.sa-invitation-status-sent {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.sa-invitation-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.sa-invitation-card-email {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0ea5e9;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.sa-invitation-card-email:hover {
+    text-decoration: underline;
+}
+
+.sa-invitation-sent-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.sa-invitation-sent-info svg {
+    width: 14px;
+    height: 14px;
+}
+
+.sa-invitation-card-right {
+    flex-shrink: 0;
+}
+
+.sa-invitation-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.sa-invitation-btn-primary {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: white;
+}
+
+.sa-invitation-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.sa-invitation-btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.sa-invitation-btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.sa-invitation-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-invitation-card-inner,
+.dark-mode .sa-invitation-card-inner {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .sa-invitation-btn-secondary,
+.dark-mode .sa-invitation-btn-secondary {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+/* ============================================
+   PURPOSE CARD
+   ============================================ */
+.sa-purpose-card {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    border-radius: 14px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-purpose-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.sa-purpose-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8b5cf6;
+    flex-shrink: 0;
+}
+
+.sa-purpose-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.sa-purpose-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-purpose-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.sa-purpose-text {
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-purpose-card-inner,
+.dark-mode .sa-purpose-card-inner {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .sa-purpose-text,
+.dark-mode .sa-purpose-text {
+    color: #e2e8f0;
+}
+
+/* ============================================
+   NOTES CARD
+   ============================================ */
+.sa-notes-card {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 14px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-notes-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.sa-notes-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d97706;
+    flex-shrink: 0;
+}
+
+.sa-notes-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.sa-notes-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-notes-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.sa-notes-text {
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-notes-card-inner,
+.dark-mode .sa-notes-card-inner {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .sa-notes-text,
+.dark-mode .sa-notes-text {
+    color: #e2e8f0;
+}
+
+/* ============================================
+   HOSTS CARD
+   ============================================ */
+.sa-hosts-card {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 14px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-hosts-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.sa-hosts-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.sa-hosts-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+.sa-hosts-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.sa-hosts-card-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sa-hosts-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-hosts-count {
+    font-size: 13px;
+    font-weight: 500;
+    color: #10b981;
+}
+
+.sa-hosts-card-body {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sa-host-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.sa-host-avatar {
+    width: 32px;
+    height: 32px;
+    background: #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.sa-host-avatar svg {
+    width: 18px;
+    height: 18px;
+}
+
+.sa-host-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.sa-host-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-host-role {
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-hosts-card-inner,
+.dark-mode .sa-hosts-card-inner {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .sa-hosts-card-header,
+.dark-mode .sa-hosts-card-header {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .sa-host-item,
+.dark-mode .sa-host-item {
+    background: #334155;
+}
+
+[data-theme="dark"] .sa-host-avatar,
+.dark-mode .sa-host-avatar {
+    background: #475569;
+}
+
+[data-theme="dark"] .sa-host-name,
+.dark-mode .sa-host-name {
+    color: #f1f5f9;
+}
+
+/* ============================================
+   RISKS CARD
+   ============================================ */
+.sa-risks-card {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-radius: 14px;
+    padding: 2px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-risks-card-inner {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.sa-risks-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.sa-risks-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444;
+    flex-shrink: 0;
+}
+
+.sa-risks-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.sa-risks-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.sa-risks-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-risks-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+}
+
+.sa-risks-status-uploaded {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.sa-risks-status-waiting {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.sa-risks-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.sa-risks-request-btn,
+.sa-risks-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.sa-risks-request-btn {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.sa-risks-request-btn:hover {
+    background: #fecaca;
+}
+
+.sa-risks-edit-btn {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.sa-risks-edit-btn:hover {
+    background: #e2e8f0;
+}
+
+.sa-risks-card-body {
+    padding: 16px;
+}
+
+.sa-risks-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.sa-risks-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sa-risks-add-btn:hover {
+    background: #fecaca;
+}
+
+/* Risks Text Item */
+.sa-risks-text-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.sa-risks-text-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.sa-risks-text-icon {
+    width: 32px;
+    height: 32px;
+    background: #fee2e2;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444;
+    flex-shrink: 0;
+}
+
+.sa-risks-text-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.sa-risks-text-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.sa-risks-text-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.sa-risks-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sa-risks-fullscreen-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.sa-risks-text-content {
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #334155;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Risks Documents */
+.sa-risks-documents-section {
+    margin-top: 12px;
+}
+
+.sa-risks-documents-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-risks-documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sa-risks-document-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sa-risks-document-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.sa-risks-document-icon {
+    width: 36px;
+    height: 36px;
+    background: #fee2e2;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444;
+    flex-shrink: 0;
+}
+
+.sa-risks-document-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sa-risks-document-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-risks-document-meta {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Risks Email History */
+.sa-risks-email-history {
+    padding: 0 16px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.sa-risks-email-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-risks-email-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sa-risks-email-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+}
+
+.sa-risks-email-status {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sa-email-sent {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.sa-email-failed {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.sa-risks-email-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sa-risks-email-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.sa-risks-email-to {
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-risks-card-inner,
+.dark-mode .sa-risks-card-inner {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .sa-risks-card-header,
+.dark-mode .sa-risks-card-header {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .sa-risks-text-item,
+.dark-mode .sa-risks-text-item {
+    background: #334155;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .sa-risks-text-header,
+.dark-mode .sa-risks-text-header {
+    background: #1e293b;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .sa-risks-text-content,
+.dark-mode .sa-risks-text-content {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .sa-risks-document-item,
+.dark-mode .sa-risks-document-item {
+    background: #334155;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .sa-risks-document-name,
+.dark-mode .sa-risks-document-name {
+    color: #f1f5f9;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 480px) {
+    .sa-visitor-card-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .sa-visitor-card-right {
+        align-self: flex-end;
+    }
+
+    .sa-invitation-card-inner {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .sa-invitation-card-right {
+        align-self: stretch;
+    }
+
+    .sa-invitation-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .sa-risks-header-actions {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 8px;
+    }
+
+    .sa-risks-request-btn,
+    .sa-risks-edit-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}

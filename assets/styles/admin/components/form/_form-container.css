@@ -10,7 +10,61 @@
 
 .sa-form-container {
     max-width: 800px;
-    margin: 20px;
+    margin: 20px auto;
+    padding: 0 16px;
 }
 
+/* ============================================
+   SIDEBAR FORM OVERRIDES
+   Ensure proper scroll and layout in sidebar
+   ============================================ */
+.sa-sidebar-content .sa-form-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 16px;
+    height: auto;
+    overflow: visible;
+    /* Let sidebar-content handle scroll */
+}
 
+.sa-sidebar-content .sa-form {
+    display: flex;
+    flex-direction: column;
+    min-height: min-content;
+}
+
+/* Form sections inside sidebar */
+.sa-sidebar-content .sa-form-section {
+    flex-shrink: 0;
+}
+
+/* Page header inside sidebar (should be hidden or minimal) */
+.sa-sidebar-content .sa-page-header {
+    display: none;
+}
+
+/* Form help text */
+.sa-form-help {
+    margin-top: var(--saw-space-1, 4px);
+    font-size: var(--saw-text-xs, 12px);
+    color: var(--saw-text-muted, #64748b);
+}
+
+/* Checkbox styling */
+.sa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--saw-space-2, 8px);
+    cursor: pointer;
+}
+
+.sa-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.sa-checkbox--highlight input:checked+span {
+    color: var(--saw-brand-600, #2563eb);
+    font-weight: 500;
+}

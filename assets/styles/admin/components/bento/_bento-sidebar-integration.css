@@ -32,7 +32,7 @@
 }
 
 /* ===== REMOVE DUPLICATE HEADERS ===== */
-.bento-content-wrapper + .sa-detail-header,
+.bento-content-wrapper+.sa-detail-header,
 .bento-wrapper .sa-detail-header {
     display: none;
 }
@@ -51,20 +51,36 @@
 }
 
 @media (max-width: 768px) {
+
+    /* Grid with padding for cards */
     .sa-sidebar--active .bento-grid {
-        --bento-grid-columns: 1;
+        --bento-grid-columns: 3;
+        /* 3 columns for stats */
+        gap: 8px;
+        padding: 12px;
+        padding-top: 0;
     }
-    
+
+    /* Full-width header with negative margin */
     .sa-sidebar .bento-header {
         margin: 0 -12px;
         width: calc(100% + 24px);
+        border-radius: 0;
+    }
+
+    /* Non-stat cards take full width */
+    .sa-sidebar .bento-card:not(.bento-stat) {
+        grid-column: 1 / -1;
+    }
+
+    /* Stats stay in their columns */
+    .sa-sidebar .bento-stat {
+        grid-column: span 1;
     }
 }
 
 /* ===== HEADER NAVIGATION INTEGRATION ===== */
-.sa-sidebar .bento-header .bento-nav-close {
-    /* Use existing close button if needed */
-}
+/* Note: Bento nav-close uses existing sidebar close button styles */
 
 /* Link existing sidebar navigation to Bento */
 /* Hide old sidebar header when using Bento design */
@@ -78,10 +94,7 @@
 }
 
 /* ===== FAB POSITION WITH BENTO ===== */
-.bento-content-wrapper ~ .sa-sidebar-fab-container,
-.bento-wrapper ~ .sa-sidebar-fab-container {
-    /* FAB buttons work normally */
-}
+/* Note: FAB buttons use default positioning from sidebar styles */
 
 /* ===== SMOOTH CONTENT TRANSITIONS ===== */
 .sa-sidebar-content {
@@ -91,4 +104,3 @@
 .sa-sidebar-content.loading {
     opacity: 0.5;
 }
-

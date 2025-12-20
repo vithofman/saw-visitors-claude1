@@ -933,7 +933,6 @@ if (typeof sawToggleAuditHistory === 'undefined') {
     font-weight: bold;
 }
 
-/* Mobile responsive */
 @media (max-width: 768px) {
     .saw-audit-header {
         padding: 10px 12px;
@@ -965,6 +964,284 @@ if (typeof sawToggleAuditHistory === 'undefined') {
     .saw-audit-item-header {
         gap: 10px;
     }
+}
+
+/* ===== MODERN AUDIT LIST (v3.0 Premium) ===== */
+.saw-audit-history-modern {
+    position: relative;
+}
+
+.saw-audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    position: relative;
+}
+
+/* Timeline line */
+.saw-audit-list::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--saw-brand-200), var(--saw-brand-100));
+    border-radius: 2px;
+}
+
+.saw-audit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.95) 100%);
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--saw-gray-100);
+    position: relative;
+    margin-left: 0;
+}
+
+.saw-audit-item:hover {
+    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, var(--saw-brand-50) 100%);
+    transform: translateX(8px);
+    box-shadow: 0 8px 24px rgba(0, 90, 140, 0.12);
+    border-color: var(--saw-brand-200);
+}
+
+/* Icon container with brand gradient */
+.saw-audit-item-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--saw-brand-500) 0%, var(--saw-brand-700) 100%);
+    border-radius: 10px;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 90, 140, 0.3);
+    position: relative;
+    z-index: 2;
+}
+
+/* Action-specific icon colors */
+.saw-audit-item[style*="--action-color: #10b981"] .saw-audit-item-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.saw-audit-item[style*="--action-color: #3b82f6"] .saw-audit-item-icon {
+    background: linear-gradient(135deg, var(--saw-brand-500) 0%, var(--saw-brand-700) 100%);
+    box-shadow: 0 4px 12px rgba(0, 90, 140, 0.3);
+}
+
+.saw-audit-item[style*="--action-color: #ef4444"] .saw-audit-item-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.saw-audit-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-audit-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.saw-audit-item-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.saw-audit-date-main {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--saw-brand-700);
+    letter-spacing: -0.02em;
+}
+
+.saw-audit-date-relative {
+    font-size: 11px;
+    color: var(--saw-gray-400);
+    background: var(--saw-gray-100);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.saw-audit-item-author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--saw-gray-500);
+}
+
+.saw-audit-item-author img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--saw-brand-100);
+}
+
+.saw-audit-item-author a {
+    color: var(--saw-brand-600);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.saw-audit-item-author a:hover {
+    color: var(--saw-brand-800);
+    text-decoration: underline;
+}
+
+/* Changes section with elegant formatting */
+.saw-audit-item-changes {
+    font-size: 12px;
+    color: var(--saw-gray-600);
+    line-height: 1.5;
+    padding: 10px 12px;
+    background: var(--saw-gray-50);
+    border-radius: 10px;
+    border-left: 3px solid var(--saw-brand-300);
+}
+
+/* Field change chips */
+.saw-audit-change-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 12px;
+    margin-bottom: 6px;
+    padding: 4px 10px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--saw-gray-200);
+    font-size: 11px;
+}
+
+.saw-audit-change-label {
+    font-weight: 600;
+    color: var(--saw-brand-700);
+}
+
+.saw-audit-change-old {
+    text-decoration: line-through;
+    color: var(--saw-danger);
+    opacity: 0.7;
+}
+
+.saw-audit-change-arrow {
+    color: var(--saw-gray-400);
+    font-size: 10px;
+}
+
+.saw-audit-change-new {
+    color: var(--saw-success);
+    font-weight: 600;
+}
+
+/* Empty state */
+.saw-audit-empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--saw-gray-400);
+    font-size: 13px;
+}
+
+/* ===== MOBILE COMPACT HISTORY ===== */
+@media (max-width: 768px) {
+    .saw-audit-list::before {
+        left: 15px;
+    }
+    
+    .saw-audit-item {
+        padding: 12px;
+        gap: 12px;
+        border-radius: 12px;
+    }
+    
+    .saw-audit-item:hover {
+        transform: translateX(4px);
+    }
+    
+    .saw-audit-item-icon {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+    
+    .saw-audit-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .saw-audit-date-main {
+        font-size: 12px;
+    }
+    
+    .saw-audit-date-relative {
+        font-size: 10px;
+        padding: 1px 6px;
+    }
+    
+    .saw-audit-item-changes {
+        font-size: 11px;
+        padding: 8px 10px;
+    }
+    
+    .saw-audit-change-field {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+[data-theme="dark"] .saw-audit-item {
+    background: linear-gradient(135deg, rgba(30,41,59,0.9) 0%, rgba(15,23,42,0.95) 100%);
+    border-color: var(--saw-gray-700);
+}
+
+[data-theme="dark"] .saw-audit-item:hover {
+    background: linear-gradient(135deg, rgba(30,41,59,1) 0%, rgba(0,90,140,0.2) 100%);
+    border-color: var(--saw-brand-600);
+}
+
+[data-theme="dark"] .saw-audit-date-main {
+    color: var(--saw-brand-200);
+}
+
+[data-theme="dark"] .saw-audit-date-relative {
+    background: var(--saw-gray-700);
+    color: var(--saw-gray-300);
+}
+
+[data-theme="dark"] .saw-audit-item-changes {
+    background: var(--saw-gray-800);
+    border-color: var(--saw-brand-600);
+}
+
+[data-theme="dark"] .saw-audit-change-field {
+    background: var(--saw-gray-700);
+    border-color: var(--saw-gray-600);
+}
+
+[data-theme="dark"] .saw-audit-change-label {
+    color: var(--saw-brand-200);
 }
 </style>
 

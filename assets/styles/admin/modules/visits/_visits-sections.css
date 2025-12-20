@@ -1,0 +1,367 @@
+/**
+ * Visits Module - Sections CSS
+ * 
+ * Styles for status grid, timeline, and schedule sections.
+ * Uses SA design system tokens.
+ * 
+ * @package SAW_Visitors
+ * @version 1.0.0
+ */
+
+/* ============================================
+   STATUS BUTTONS GRID
+   ============================================ */
+.sa-status-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.sa-status-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 8px;
+    background: var(--sa-bg-subtle, #f8fafc);
+    border: 2px solid var(--sa-border, #e2e8f0);
+    border-radius: var(--sa-radius-lg, 12px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    position: relative;
+}
+
+.sa-status-btn:hover:not(:disabled) {
+    background: var(--sa-bg-elevated, #ffffff);
+    border-color: var(--sa-brand-300, #93c5fd);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sa-status-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.sa-status-btn-current {
+    background: var(--sa-brand-50, #eff6ff);
+    border-color: var(--sa-brand-500, #3b82f6);
+}
+
+.sa-status-btn-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.sa-status-btn-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sa-text-secondary, #64748b);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.sa-status-btn-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    background: var(--sa-success, #22c55e);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-status-btn,
+.dark-mode .sa-status-btn {
+    background: var(--sa-bg-elevated, #1e293b);
+    border-color: var(--sa-border, #334155);
+}
+
+[data-theme="dark"] .sa-status-btn:hover:not(:disabled),
+.dark-mode .sa-status-btn:hover:not(:disabled) {
+    background: var(--sa-bg-muted, #334155);
+    border-color: var(--sa-brand-400, #60a5fa);
+}
+
+[data-theme="dark"] .sa-status-btn-current,
+.dark-mode .sa-status-btn-current {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--sa-brand-500, #3b82f6);
+}
+
+/* ============================================
+   VISIT TIMELINE
+   ============================================ */
+.sa-visit-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0;
+}
+
+.sa-timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.sa-timeline-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sa-timeline-dot-start {
+    background: var(--sa-success-subtle, #dcfce7);
+    color: var(--sa-success, #22c55e);
+}
+
+.sa-timeline-dot-end {
+    background: var(--sa-brand-subtle, #dbeafe);
+    color: var(--sa-brand-500, #3b82f6);
+}
+
+.sa-timeline-dot-active {
+    background: var(--sa-warning-subtle, #fef3c7);
+    color: var(--sa-warning, #f59e0b);
+    animation: sa-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sa-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+.sa-timeline-dot svg {
+    width: 14px;
+    height: 14px;
+}
+
+.sa-timeline-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.sa-timeline-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sa-text-muted, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-timeline-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sa-text-primary, #0f172a);
+}
+
+.sa-timeline-value-active {
+    color: var(--sa-warning, #f59e0b);
+}
+
+.sa-timeline-time {
+    font-size: 13px;
+    color: var(--sa-text-secondary, #64748b);
+}
+
+.sa-timeline-connector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 4px 15px;
+}
+
+.sa-timeline-line {
+    width: 2px;
+    height: 24px;
+    background: var(--sa-border, #e2e8f0);
+    border-radius: 1px;
+}
+
+.sa-timeline-active .sa-timeline-line {
+    background: linear-gradient(180deg, var(--sa-success, #22c55e), var(--sa-warning, #f59e0b));
+}
+
+.sa-timeline-duration {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sa-text-muted, #94a3b8);
+    background: var(--sa-bg-subtle, #f8fafc);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.sa-timeline-now {
+    background: var(--sa-warning-subtle, #fef3c7);
+    color: var(--sa-warning, #f59e0b);
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-timeline-value,
+.dark-mode .sa-timeline-value {
+    color: var(--sa-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .sa-timeline-duration,
+.dark-mode .sa-timeline-duration {
+    background: var(--sa-bg-elevated, #334155);
+}
+
+/* ============================================
+   SCHEDULE CARDS
+   ============================================ */
+.sa-visit-schedule-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sa-schedule-day-card {
+    background: var(--sa-bg-subtle, #f8fafc);
+    border: 1px solid var(--sa-border, #e2e8f0);
+    border-radius: var(--sa-radius-md, 8px);
+    overflow: hidden;
+}
+
+.sa-schedule-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--sa-bg-elevated, #ffffff);
+    border-bottom: 1px solid var(--sa-border, #e2e8f0);
+}
+
+.sa-schedule-day-date {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sa-schedule-day-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sa-brand-500, #3b82f6);
+    text-transform: uppercase;
+}
+
+.sa-schedule-day-number {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sa-text-primary, #0f172a);
+}
+
+.sa-schedule-day-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sa-text-secondary, #64748b);
+}
+
+.sa-schedule-day-time svg {
+    width: 14px;
+    height: 14px;
+    color: var(--sa-text-muted, #94a3b8);
+}
+
+.sa-schedule-day-notes {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--sa-text-secondary, #64748b);
+    background: var(--sa-bg-subtle, #f8fafc);
+}
+
+.sa-schedule-day-notes svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--sa-text-muted, #94a3b8);
+}
+
+/* Dark mode */
+[data-theme="dark"] .sa-schedule-day-card,
+.dark-mode .sa-schedule-day-card {
+    background: var(--sa-bg-muted, #1e293b);
+    border-color: var(--sa-border, #334155);
+}
+
+[data-theme="dark"] .sa-schedule-day-header,
+.dark-mode .sa-schedule-day-header {
+    background: var(--sa-bg-elevated, #334155);
+    border-color: var(--sa-border, #475569);
+}
+
+[data-theme="dark"] .sa-schedule-day-number,
+.dark-mode .sa-schedule-day-number {
+    color: var(--sa-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .sa-schedule-day-notes,
+.dark-mode .sa-schedule-day-notes {
+    background: var(--sa-bg-muted, #1e293b);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 480px) {
+    .sa-status-buttons-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sa-status-btn {
+        padding: 10px 6px;
+    }
+
+    .sa-status-btn-icon {
+        font-size: 18px;
+    }
+
+    .sa-status-btn-label {
+        font-size: 10px;
+    }
+
+    .sa-timeline-row {
+        gap: 8px;
+    }
+
+    .sa-timeline-dot {
+        width: 28px;
+        height: 28px;
+    }
+}

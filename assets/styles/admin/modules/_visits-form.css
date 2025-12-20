@@ -1,0 +1,1759 @@
+/**
+ * SAW Admin - Visits Form Specific Styles
+ * 
+ * Styles for visits-specific form components like visitors section,
+ * hosts selection, schedule picker, and radio toggles.
+ * 
+ * @package SAW_Visitors
+ * @version 3.0.0
+ */
+
+/* ============================================
+   CRITICAL: SIDEBAR FORM SCROLL FIX
+   The form MUST scroll inside the sidebar
+   ============================================ */
+
+/* Sidebar content area - ensure scrollability */
+.sa-sidebar-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 0 !important;
+    flex: 1 1 0 !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Form container inside sidebar */
+.sa-sidebar-content .sa-form-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    height: auto !important;
+    min-height: min-content !important;
+    overflow: visible !important;
+}
+
+/* Form itself */
+.sa-sidebar-content .sa-form {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* All direct children of sidebar content should shrink */
+.sa-sidebar-content>* {
+    flex-shrink: 0;
+}
+
+/* ============================================
+   VISITS FORM FIELD ENHANCEMENTS
+   Better visual design matching companies form
+   ============================================ */
+
+/* Form section styling enhancement */
+.sa-form-section {
+    margin-bottom: 20px;
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 12px;
+    background: var(--saw-bg-elevated, #ffffff);
+    overflow: hidden;
+}
+
+.sa-form-section summary {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--saw-border, #e2e8f0);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sa-form-section summary:hover {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.sa-form-section[open] summary {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.sa-form-section-content {
+    padding: 20px;
+}
+
+/* Form row - proper grid layout */
+.sa-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.sa-form-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Form group */
+.sa-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Labels */
+.sa-form-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--saw-text-secondary, #475569);
+}
+
+.sa-form-label--required::after {
+    content: " *";
+    color: var(--saw-danger, #dc2626);
+}
+
+/* Inputs - enhanced styling */
+.sa-input,
+.sa-sidebar-content input[type="text"],
+.sa-sidebar-content input[type="email"],
+.sa-sidebar-content input[type="date"],
+.sa-sidebar-content input[type="time"],
+.sa-sidebar-content input[type="number"],
+.sa-sidebar-content textarea,
+.sa-sidebar-content select {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 2px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    background: var(--saw-bg-elevated, #ffffff);
+    color: var(--saw-text-primary, #1e293b);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.sa-input:focus,
+.sa-sidebar-content input:focus,
+.sa-sidebar-content textarea:focus,
+.sa-sidebar-content select:focus {
+    outline: none;
+    border-color: var(--saw-brand-500, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.sa-input:disabled,
+.sa-sidebar-content input:disabled,
+.sa-sidebar-content select:disabled {
+    background: var(--saw-gray-100, #f1f5f9);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Textarea */
+.sa-sidebar-content textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Select dropdown */
+.sa-sidebar-content select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8.5L1.5 4h9z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+/* Form hint */
+.sa-form-hint {
+    font-size: 12px;
+    color: var(--saw-text-muted, #64748b);
+    margin-top: 4px;
+}
+
+/* ============================================
+   RADIO TOGGLE (Person Type Selection)
+   ============================================ */
+
+/* Toggle wrapper - flex container */
+.sa-visitor-type-toggle {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.sa-radio-toggle {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+    cursor: pointer;
+}
+
+.sa-radio-toggle input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sa-radio-toggle-content {
+    padding: 16px;
+    border: 2px solid var(--saw-border, #dcdcde);
+    border-radius: 8px;
+    transition: all 0.2s;
+    background: var(--saw-bg-elevated, #fff);
+}
+
+.sa-radio-toggle input:checked+.sa-radio-toggle-content {
+    border-color: var(--saw-brand-500, #0073aa);
+    background: var(--saw-brand-50, #f0f6fc);
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+}
+
+.sa-radio-toggle:hover .sa-radio-toggle-content {
+    border-color: var(--saw-brand-400, #0073aa);
+}
+
+.sa-radio-toggle input:checked+.sa-radio-toggle-content .sa-radio-toggle-title {
+    color: var(--saw-brand-600, #0073aa);
+}
+
+.sa-radio-toggle-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--saw-text-primary, #1d2327);
+    font-size: 15px;
+}
+
+.sa-radio-toggle-subtitle {
+    font-size: 13px;
+    color: var(--saw-text-muted, #646970);
+}
+
+/* ============================================
+   VISITORS SECTION - Enhanced Design
+   Matching HTML structure with saw-* classes
+   ============================================ */
+
+/* Main Section Container */
+.saw-visitors-section {
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border: 2px solid var(--saw-purple-200, #e9d5ff);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+}
+
+/* Section Header */
+.saw-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--saw-purple-200, #e9d5ff);
+}
+
+.saw-section-header h4 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--saw-text-primary, #1e293b);
+}
+
+.saw-section-header h4 svg {
+    color: var(--saw-purple-500, #a855f7);
+}
+
+/* Add Visitor Button */
+#btn-add-visitor {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--saw-purple-600, #9333ea) 0%, var(--saw-purple-500, #a855f7) 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.25);
+}
+
+#btn-add-visitor:hover {
+    background: linear-gradient(135deg, var(--saw-purple-700, #7e22ce) 0%, var(--saw-purple-600, #9333ea) 100%);
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.35);
+    transform: translateY(-1px);
+}
+
+#btn-add-visitor svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   VISITORS EMPTY STATE
+   ============================================ */
+#visitors-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border-radius: 10px;
+    border: 2px dashed var(--saw-purple-200, #e9d5ff);
+}
+
+.saw-empty-icon {
+    margin-bottom: 16px;
+}
+
+.saw-empty-icon svg {
+    stroke: var(--saw-purple-300, #d8b4fe);
+    opacity: 0.7;
+}
+
+#visitors-empty-state p {
+    margin: 0 0 8px;
+    color: var(--saw-text-secondary, #64748b);
+}
+
+#visitors-empty-state p:last-child {
+    margin-bottom: 0;
+}
+
+/* ============================================
+   VISITORS LIST - Grid of Cards
+   ============================================ */
+#visitors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ============================================
+   VISITOR CARD - Individual Entry
+   ============================================ */
+.saw-visitor-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 10px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.saw-visitor-card:hover {
+    border-color: var(--saw-purple-300, #d8b4fe);
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.1);
+}
+
+/* New visitor badge styling */
+.saw-visitor-card.is-new {
+    border-left: 4px solid var(--saw-success, #22c55e);
+}
+
+.saw-visitor-card.is-modified {
+    border-left: 4px solid var(--saw-warning, #f59e0b);
+}
+
+/* Card Info */
+.saw-visitor-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.saw-visitor-card-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--saw-text-primary, #1e293b);
+    margin-bottom: 6px;
+}
+
+.saw-visitor-card-name svg {
+    width: 18px;
+    height: 18px;
+    color: var(--saw-purple-400, #c084fc);
+    flex-shrink: 0;
+}
+
+/* Badge for new visitors */
+.saw-badge-new {
+    display: inline-flex;
+    padding: 2px 8px;
+    background: var(--saw-success-light, #dcfce7);
+    color: var(--saw-success-dark, #166534);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+}
+
+/* Card Details (email, phone, position) */
+.saw-visitor-card-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--saw-text-muted, #64748b);
+    margin-left: 26px;
+    /* Align with name (after icon) */
+}
+
+.saw-visitor-card-details span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.saw-visitor-card-details svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+}
+
+/* Card Actions */
+.saw-visitor-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.saw-visitor-card-actions button {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    color: var(--saw-text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-visitor-card-actions button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.saw-visitor-card-actions .btn-edit:hover {
+    background: var(--saw-brand-50, #eff6ff);
+    border-color: var(--saw-brand-300, #93c5fd);
+    color: var(--saw-brand-600, #2563eb);
+}
+
+.saw-visitor-card-actions .btn-delete:hover {
+    background: var(--saw-danger-light, #fee2e2);
+    border-color: var(--saw-danger, #ef4444);
+    color: var(--saw-danger, #ef4444);
+}
+
+/* ============================================
+   VISITORS COUNTER
+   ============================================ */
+#visitors-counter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--saw-purple-100, #f3e8ff);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--saw-purple-700, #7e22ce);
+    margin-top: 16px;
+}
+
+#visitors-counter svg {
+    width: 18px;
+    height: 18px;
+}
+
+#visitors-counter strong {
+    font-weight: 700;
+}
+
+/* ============================================
+   NESTED VISITOR FORM
+   ============================================ */
+#visitor-nested-form {
+    background: var(--saw-bg-elevated, #ffffff);
+    border-radius: 12px;
+    border: 1px solid var(--saw-border, #e2e8f0);
+    overflow: hidden;
+}
+
+.saw-nested-form-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--saw-border, #e2e8f0);
+}
+
+.saw-nested-form-header button {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-nested-form-header button:hover {
+    border-color: var(--saw-brand-300, #93c5fd);
+    color: var(--saw-brand-600, #2563eb);
+}
+
+#visitor-form-title {
+    flex: 1;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--saw-text-primary, #1e293b);
+}
+
+.saw-nested-form-body {
+    padding: 24px 20px;
+}
+
+.saw-nested-form-body .sa-form-row {
+    margin-bottom: 16px;
+}
+
+.saw-nested-form-body .sa-form-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Form field error state */
+.saw-nested-form-body .saw-input.has-error,
+.saw-nested-form-body .sa-input.has-error {
+    border-color: var(--saw-danger, #ef4444);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.saw-field-error {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--saw-danger, #ef4444);
+}
+
+/* Nested form footer */
+.saw-nested-form-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 16px 20px;
+    background: var(--saw-bg-subtle, #f8fafc);
+    border-top: 1px solid var(--saw-border, #e2e8f0);
+}
+
+#btn-visitor-cancel {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#btn-visitor-cancel:hover {
+    background: var(--saw-bg-elevated, #ffffff);
+    border-color: var(--saw-gray-400, #9ca3af);
+}
+
+#btn-visitor-save {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, var(--saw-success, #22c55e) 0%, var(--saw-success-light2, #4ade80) 100%);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+}
+
+#btn-visitor-save:hover {
+    background: linear-gradient(135deg, var(--saw-success-dark, #16a34a) 0%, var(--saw-success, #22c55e) 100%);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+}
+
+/* ============================================
+   VISITORS - MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 600px) {
+    .saw-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    #btn-add-visitor {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .saw-visitor-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .saw-visitor-card-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--saw-border, #e2e8f0);
+    }
+
+    .saw-visitor-card-details {
+        margin-left: 0;
+    }
+}
+
+/* ============================================
+   VISITORS - DARK MODE
+   ============================================ */
+[data-theme="dark"] .saw-visitors-section,
+.dark-mode .saw-visitors-section {
+    background: linear-gradient(135deg, #2e1065 0%, #3b0764 100%);
+    border-color: var(--saw-purple-800, #581c87);
+}
+
+[data-theme="dark"] .saw-section-header,
+.dark-mode .saw-section-header {
+    border-bottom-color: var(--saw-purple-700, #6b21a8);
+}
+
+[data-theme="dark"] #visitors-empty-state,
+.dark-mode #visitors-empty-state {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-purple-800, #581c87);
+}
+
+[data-theme="dark"] .saw-visitor-card,
+.dark-mode .saw-visitor-card {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] #visitors-counter,
+.dark-mode #visitors-counter {
+    background: var(--saw-purple-900, #581c87);
+    color: var(--saw-purple-200, #e9d5ff);
+}
+
+[data-theme="dark"] #visitor-nested-form,
+.dark-mode #visitor-nested-form {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-nested-form-header,
+.dark-mode .saw-nested-form-header {
+    background: var(--saw-bg-elevated, #1e293b);
+}
+
+[data-theme="dark"] .saw-nested-form-footer,
+.dark-mode .saw-nested-form-footer {
+    background: var(--saw-bg-elevated, #1e293b);
+}
+
+/* ============================================
+   HOSTS SELECTION
+   ============================================ */
+.sa-hosts-list {
+    border: 2px solid var(--saw-border, #dcdcde);
+    border-radius: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--saw-bg-elevated, #fff);
+}
+
+.sa-hosts-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sa-hosts-search {
+    flex: 1;
+    max-width: 300px;
+}
+
+.sa-host-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--saw-border-light, #f1f5f9);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sa-host-item:last-child {
+    border-bottom: none;
+}
+
+.sa-host-item:hover {
+    background: var(--saw-bg-subtle, #f8fafc);
+}
+
+.sa-host-item.sa-host-item--selected {
+    background: var(--saw-brand-50, #eff6ff);
+}
+
+.sa-host-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.sa-host-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--saw-brand-100, #dbeafe);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--saw-brand-600, #2563eb);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.sa-host-info {
+    flex: 1;
+}
+
+.sa-host-name {
+    font-weight: 500;
+    color: var(--saw-text-primary, #1d2327);
+}
+
+.sa-host-email {
+    font-size: 12px;
+    color: var(--saw-text-muted, #64748b);
+}
+
+/* ============================================
+   SCHEDULE PICKER (Multi-day) - Enhanced Design
+   Each day is a card with clear visual separation
+   ============================================ */
+
+/* Main container with header styling */
+.saw-schedule-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid var(--saw-brand-200, #bae6fd);
+    border-radius: 12px;
+}
+
+/* Individual day card */
+.saw-schedule-row {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    position: relative;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.saw-schedule-row:hover {
+    border-color: var(--saw-brand-300, #7dd3fc);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+}
+
+/* Day number badge */
+.saw-schedule-row::before {
+    content: "Den " attr(data-index);
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    padding: 2px 10px;
+    background: var(--saw-brand-500, #0ea5e9);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+}
+
+/* Adjust for 0-indexed (Day 1 instead of Day 0) */
+.saw-schedule-row[data-index="0"]::before {
+    content: "Den 1";
+}
+
+.saw-schedule-row[data-index="1"]::before {
+    content: "Den 2";
+}
+
+.saw-schedule-row[data-index="2"]::before {
+    content: "Den 3";
+}
+
+.saw-schedule-row[data-index="3"]::before {
+    content: "Den 4";
+}
+
+.saw-schedule-row[data-index="4"]::before {
+    content: "Den 5";
+}
+
+/* Fields container */
+.saw-schedule-row-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Field group for horizontal layout */
+.saw-schedule-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Row of fields - inline layout */
+.saw-schedule-field-group-row {
+    display: grid;
+    gap: 12px;
+}
+
+/* Date row - full width */
+.saw-schedule-field-group-row.date-row {
+    grid-template-columns: 1fr;
+}
+
+/* Time row - two columns */
+.saw-schedule-field-group-row.time-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Individual field */
+.saw-schedule-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saw-schedule-field label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--saw-text-muted, #64748b);
+}
+
+/* Notes field - full width with slightly different style */
+.saw-schedule-notes-full {
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px dashed var(--saw-border, #e2e8f0);
+    margin-top: 4px;
+}
+
+/* Action buttons container */
+.saw-schedule-row-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+    padding-left: 8px;
+    border-left: 1px solid var(--saw-border, #e2e8f0);
+}
+
+/* Action buttons */
+.saw-schedule-row-actions button,
+.saw-add-schedule-day-inline,
+.saw-remove-schedule-day {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-schedule-row-actions button svg,
+.saw-add-schedule-day-inline svg,
+.saw-remove-schedule-day svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Add button - green */
+.saw-add-schedule-day-inline:hover {
+    background: var(--saw-success-light, #dcfce7);
+    border-color: var(--saw-success, #22c55e);
+    color: var(--saw-success, #22c55e);
+}
+
+/* Remove button - red */
+.saw-remove-schedule-day:hover:not(:disabled) {
+    background: var(--saw-danger-light, #fee2e2);
+    border-color: var(--saw-danger, #ef4444);
+    color: var(--saw-danger, #ef4444);
+}
+
+.saw-remove-schedule-day:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   SCHEDULE - MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 600px) {
+    .saw-schedule-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .saw-schedule-field-group-row.time-row {
+        grid-template-columns: 1fr;
+    }
+
+    .saw-schedule-row-actions {
+        flex-direction: row;
+        border-left: none;
+        border-top: 1px solid var(--saw-border, #e2e8f0);
+        padding-left: 0;
+        padding-top: 12px;
+        justify-content: flex-end;
+    }
+}
+
+/* ============================================
+   SCHEDULE - DARK MODE
+   ============================================ */
+[data-theme="dark"] .saw-schedule-container,
+.dark-mode .saw-schedule-container {
+    background: linear-gradient(135deg, #0c4a6e 0%, #164e63 100%);
+    border-color: var(--saw-brand-700, #0369a1);
+}
+
+[data-theme="dark"] .saw-schedule-row,
+.dark-mode .saw-schedule-row {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-schedule-notes-full,
+.dark-mode .saw-schedule-notes-full {
+    border-top-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-schedule-row-actions,
+.dark-mode .saw-schedule-row-actions {
+    border-left-color: var(--saw-border, #334155);
+}
+
+/* ============================================
+   FORM ACTIONS (Submit buttons)
+   ============================================ */
+.sa-form-actions {
+    display: flex;
+    gap: 12px;
+    padding: 24px 0;
+    margin-top: 24px;
+    border-top: 1px solid var(--saw-border, #e2e8f0);
+}
+
+/* ============================================
+   DARK MODE OVERRIDES
+   ============================================ */
+[data-theme="dark"] .sa-visitors-section,
+.dark-mode .sa-visitors-section {
+    background: var(--saw-bg-elevated, #1e293b);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .sa-visitor-card,
+.dark-mode .sa-visitor-card {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .sa-hosts-list,
+.dark-mode .sa-hosts-list {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .sa-schedule-row,
+.dark-mode .sa-schedule-row {
+    background: var(--saw-bg-elevated, #1e293b);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .sa-radio-toggle-content,
+.dark-mode .sa-radio-toggle-content {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #475569);
+}
+
+/* ============================================
+   HIDE FAB WHEN NESTED FORM IS VISIBLE
+   ============================================ */
+#visitor-nested-form:not([style*="display: none"])~.sa-sidebar-fab-container,
+#visitor-nested-form[style=""]~.sa-sidebar-fab-container,
+.saw-nested-form:not([style*="display: none"])~.sa-sidebar-fab-container {
+    display: none !important;
+}
+
+/* Also hide via sibling when nested form is shown (form-level) */
+.sa-form-container:has(#visitor-nested-form:not([style*="display: none"]))~.sa-sidebar-fab-container,
+.sa-sidebar-content:has(#visitor-nested-form:not([style*="display: none"])) .sa-sidebar-fab-container {
+    display: none !important;
+}
+
+/* ============================================
+   ENHANCED BACK BUTTON - Icon Only
+   ============================================ */
+.saw-btn-back,
+#btn-visitor-back {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 2px solid var(--saw-border, #e2e8f0);
+    border-radius: 10px;
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-btn-back:hover,
+#btn-visitor-back:hover {
+    background: var(--saw-brand-50, #eff6ff);
+    border-color: var(--saw-brand-400, #60a5fa);
+    color: var(--saw-brand-600, #2563eb);
+}
+
+.saw-btn-back svg,
+#btn-visitor-back svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ============================================
+   HOSTS SELECTION - Enhanced Design
+   ============================================ */
+
+/* Hosts section wrapper */
+.field-hosts-row {
+    margin-top: 16px;
+}
+
+/* Hosts list container */
+#hosts-list {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid var(--saw-success-light, #86efac) !important;
+    border-radius: 12px !important;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+/* Individual host item - the clickable card */
+.saw-host-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    margin: 4px 0;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saw-host-item:first-child {
+    margin-top: 0;
+}
+
+.saw-host-item:last-child {
+    margin-bottom: 0;
+}
+
+.saw-host-item:hover {
+    border-color: var(--saw-success, #22c55e);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+}
+
+.saw-host-item.selected {
+    background: var(--saw-success-light, #dcfce7);
+    border-color: var(--saw-success, #22c55e);
+}
+
+/* Host checkbox */
+.saw-host-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--saw-success, #22c55e);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+    pointer-events: none;
+    /* Let parent handle clicks */
+}
+
+/* Host label - name and role inline */
+.saw-host-item label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin: 0;
+    padding: 6px 0;
+    /* Add vertical padding for better click area */
+    font-size: 14px;
+    pointer-events: none;
+    /* Let parent handle clicks */
+}
+
+.saw-host-name {
+    font-weight: 500;
+    color: var(--saw-text-primary, #1e293b);
+}
+
+.saw-host-role {
+    font-size: 12px;
+    color: var(--saw-text-muted, #64748b);
+    margin-left: auto;
+}
+
+/* Host controls (search + select all) */
+.saw-host-controls {
+    display: flex !important;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    background: var(--saw-bg-subtle, #f8fafc);
+    border-radius: 8px;
+}
+
+#host-search {
+    flex: 1;
+    max-width: 240px;
+}
+
+/* Host counter badge */
+#host-counter {
+    padding: 4px 10px !important;
+    font-size: 13px;
+    background: var(--saw-success-light, #dcfce7) !important;
+    color: var(--saw-success-dark, #166534) !important;
+}
+
+/* Loading state */
+#hosts-list .sa-text-muted {
+    padding: 20px;
+    text-align: center;
+    color: var(--saw-text-muted, #64748b);
+}
+
+/* ============================================
+   HOSTS - DARK MODE
+   ============================================ */
+[data-theme="dark"] #hosts-list,
+.dark-mode #hosts-list {
+    background: linear-gradient(135deg, #052e16 0%, #14532d 100%);
+    border-color: var(--saw-success-dark, #166534) !important;
+}
+
+[data-theme="dark"] .saw-host-item,
+.dark-mode .saw-host-item {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-host-item.selected,
+.dark-mode .saw-host-item.selected {
+    background: var(--saw-success-dark, #166534);
+    border-color: var(--saw-success, #22c55e);
+}
+
+[data-theme="dark"] .saw-host-controls,
+.dark-mode .saw-host-controls {
+    background: var(--saw-bg-elevated, #1e293b);
+}
+
+/* ============================================
+   ACTION INFO SECTION - Enhanced Design
+   ============================================ */
+
+/* Details container for action info - Professional Slate/Blue Theme */
+.sa-form-section-action-info {
+    margin-top: 24px;
+    border: 1px solid var(--saw-border, #e2e8f0) !important;
+    border-radius: 12px;
+    background: var(--saw-bg-elevated, #ffffff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sa-form-section-action-info>summary {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 11px 11px 0 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--saw-text-primary, #334155);
+    transition: background 0.2s;
+}
+
+.sa-form-section-action-info>summary:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.sa-form-section-action-info>summary svg {
+    color: var(--saw-brand-500, #3b82f6);
+    opacity: 0.8;
+}
+
+.sa-form-section-action-info[open]>summary {
+    border-radius: 11px 11px 0 0;
+    border-bottom: 1px solid var(--saw-border, #e2e8f0);
+}
+
+.sa-form-section-action-info .sa-form-section-content {
+    padding: 24px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border-radius: 0 0 11px 11px;
+}
+
+/* Help text styling - Subtle and Professional */
+.sa-form-section-action-info .saw-help-text {
+    margin: 6px 0 0 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--saw-text-muted, #94a3b8);
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* General form hint - subtle style */
+.saw-help-text {
+    margin: 4px 0 0 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--saw-text-muted, #94a3b8) !important;
+    font-size: 12px !important;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* ============================================
+   LANGUAGE TABS - Enhanced Design
+   ============================================ */
+.saw-language-tabs-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 8px;
+    background: var(--saw-bg-subtle, #f8fafc);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Nav arrows */
+.saw-language-tab-nav {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.saw-language-tab-nav:hover {
+    background: var(--saw-brand-50, #eff6ff);
+    border-color: var(--saw-brand-400, #60a5fa);
+    color: var(--saw-brand-600, #2563eb);
+}
+
+.saw-language-tab-nav svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Tabs container */
+.saw-language-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex: 1;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.saw-language-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* Individual tab */
+.saw-language-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--saw-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.saw-language-tab:hover {
+    border-color: var(--saw-brand-400, #60a5fa);
+    background: var(--saw-brand-50, #eff6ff);
+}
+
+.saw-language-tab.active {
+    background: linear-gradient(135deg, var(--saw-brand-500, #3b82f6) 0%, var(--saw-brand-400, #60a5fa) 100%);
+    border-color: var(--saw-brand-500, #3b82f6);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+/* Language content area */
+.saw-language-contents {
+    margin-bottom: 16px;
+}
+
+.saw-language-content {
+    padding: 16px;
+    background: var(--saw-bg-elevated, #ffffff);
+    border: 1px solid var(--saw-border, #e2e8f0);
+    border-radius: 10px;
+}
+
+/* ============================================
+   OOPP SELECTOR - Enhanced Design
+   ============================================ */
+.saw-oopp-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* Available OOPP panel */
+.saw-oopp-available {
+    background: var(--saw-bg-subtle, #f9fafb) !important;
+    border: 2px solid var(--saw-border, #e5e7eb) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+}
+
+.saw-oopp-available h4 {
+    margin: 0 0 12px 0 !important;
+    font-size: 14px !important;
+    font-weight: 600;
+    color: var(--saw-text-primary, #374151) !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Selected OOPP panel - Blue theme */
+.saw-oopp-selected {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    border: 2px solid var(--saw-brand-400, #60a5fa) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+}
+
+.saw-oopp-selected h4 {
+    margin: 0 0 12px 0 !important;
+    font-size: 14px !important;
+    font-weight: 600;
+    color: var(--saw-brand-700, #1d4ed8) !important;
+}
+
+/* OOPP list */
+.saw-oopp-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    max-height: 280px !important;
+    overflow-y: auto !important;
+}
+
+/* OOPP item */
+.saw-oopp-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 14px !important;
+    background: var(--saw-bg-elevated, #ffffff) !important;
+    border: 1px solid var(--saw-border, #e5e7eb) !important;
+    border-radius: 10px !important;
+    transition: all 0.2s !important;
+}
+
+.saw-oopp-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.saw-oopp-item.selected {
+    border-color: var(--saw-warning, #f59e0b) !important;
+    background: #fffbeb !important;
+}
+
+.saw-oopp-name {
+    font-weight: 600 !important;
+    color: var(--saw-text-primary, #374151) !important;
+    font-size: 14px !important;
+}
+
+.saw-oopp-group {
+    font-size: 12px !important;
+    color: var(--saw-text-muted, #6b7280) !important;
+}
+
+/* OOPP buttons */
+.saw-add-oopp {
+    background: linear-gradient(135deg, var(--saw-success, #22c55e) 0%, #4ade80 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    width: 32px !important;
+    height: 32px !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 18px !important;
+    font-weight: bold;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
+}
+
+.saw-add-oopp:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(34, 197, 94, 0.4) !important;
+}
+
+.saw-remove-oopp {
+    background: linear-gradient(135deg, var(--saw-danger, #ef4444) 0%, #f87171 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    width: 32px !important;
+    height: 32px !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.saw-remove-oopp:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* ============================================
+   ACTION INFO - MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+
+    /* Language tabs - horizontal scroll on mobile */
+    .saw-language-tabs-wrapper {
+        padding: 6px;
+    }
+
+    .saw-language-tab {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    /* OOPP selector - single column on mobile */
+    .saw-oopp-selector {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+
+    .saw-oopp-available,
+    .saw-oopp-selected {
+        padding: 12px !important;
+    }
+
+    .saw-oopp-list {
+        max-height: 200px !important;
+    }
+
+    .saw-oopp-item {
+        padding: 10px 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .sa-form-section-action-info .sa-form-section-content {
+        padding: 12px;
+    }
+
+    .saw-language-tabs-wrapper {
+        flex-wrap: wrap;
+    }
+
+    .saw-language-tabs {
+        width: 100%;
+        order: 3;
+        margin-top: 8px;
+    }
+
+    .saw-language-tab-nav-prev {
+        order: 1;
+    }
+
+    .saw-language-tab-nav-next {
+        order: 2;
+        margin-left: auto;
+    }
+}
+
+/* ============================================
+   ACTION INFO - DARK MODE
+   ============================================ */
+[data-theme="dark"] .sa-form-section-action-info,
+.dark-mode .sa-form-section-action-info {
+    background: var(--saw-bg-elevated, #1e293b);
+    border-color: var(--saw-border, #334155) !important;
+}
+
+[data-theme="dark"] .sa-form-section-action-info>summary,
+.dark-mode .sa-form-section-action-info>summary {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: var(--saw-text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .sa-form-section-action-info .sa-form-section-content,
+.dark-mode .sa-form-section-action-info .sa-form-section-content {
+    background: var(--saw-bg-surface, #0f172a);
+}
+
+[data-theme="dark"] .saw-language-tabs-wrapper,
+.dark-mode .saw-language-tabs-wrapper {
+    background: var(--saw-bg-elevated, #1e293b);
+}
+
+[data-theme="dark"] .saw-language-tab,
+.dark-mode .saw-language-tab {
+    background: var(--saw-bg-surface, #0f172a);
+    border-color: var(--saw-border, #334155);
+    color: var(--saw-text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .saw-language-content,
+.dark-mode .saw-language-content {
+    background: var(--saw-bg-elevated, #1e293b);
+    border-color: var(--saw-border, #334155);
+}
+
+[data-theme="dark"] .saw-oopp-available,
+.dark-mode .saw-oopp-available {
+    background: var(--saw-bg-elevated, #1e293b) !important;
+    border-color: var(--saw-border, #334155) !important;
+}
+
+[data-theme="dark"] .saw-oopp-selected,
+.dark-mode .saw-oopp-selected {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%) !important;
+    border-color: var(--saw-brand-400, #60a5fa) !important;
+}
+
+[data-theme="dark"] .saw-oopp-item,
+.dark-mode .saw-oopp-item {
+    background: var(--saw-bg-surface, #0f172a) !important;
+    border-color: var(--saw-border, #334155) !important;
+}
+
+[data-theme="dark"] .saw-oopp-name,
+.dark-mode .saw-oopp-name {
+    color: var(--saw-text-primary, #f1f5f9) !important;
+}
+
+/* ============================================
+   FILE UPLOAD - Isolation Fix
+   ============================================ */
+.saw-file-upload-modern-container {
+    position: relative;
+    z-index: 1;
+    contain: layout;
+}
+
+.saw-file-upload-modern {
+    position: relative;
+    z-index: auto;
+}
+
+/* ============================================
+   INVITATION EMAIL SECTION - HIGHLIGHTED
+   ============================================ */
+.saw-invitation-email-section {
+    padding: 20px !important;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 2px solid var(--saw-success, #22c55e) !important;
+    border-radius: 12px !important;
+    margin-top: 24px !important;
+    box-shadow: 0 4px 16px rgba(34, 197, 94, 0.15);
+}
+
+.saw-invitation-email-section .sa-form-label {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--saw-success-dark, #166534) !important;
+    margin-bottom: 8px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.saw-invitation-email-section .sa-form-label svg {
+    color: var(--saw-success, #22c55e);
+}
+
+/* Important badge */
+.saw-important-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, var(--saw-success, #22c55e) 0%, #4ade80 100%);
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 20px;
+    margin-left: 8px;
+}
+
+/* Field hint */
+.saw-field-hint {
+    margin: 0 0 12px 0;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--saw-success-dark, #166534);
+    border-left: 3px solid var(--saw-success, #22c55e);
+}
+
+/* Important input */
+.saw-important-input {
+    border: 2px solid var(--saw-success, #22c55e) !important;
+    background: var(--saw-bg-elevated, #ffffff) !important;
+    font-size: 16px !important;
+    padding: 14px 16px !important;
+    border-radius: 10px !important;
+}
+
+.saw-important-input:focus {
+    border-color: var(--saw-success-dark, #15803d) !important;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2) !important;
+    outline: none;
+}
+
+.saw-important-input::placeholder {
+    color: var(--saw-success-light2, #86efac);
+}
+
+/* ============================================
+   INVITATION EMAIL - DARK MODE
+   ============================================ */
+[data-theme="dark"] .saw-invitation-email-section,
+.dark-mode .saw-invitation-email-section {
+    background: linear-gradient(135deg, #052e16 0%, #14532d 100%);
+    border-color: var(--saw-success, #22c55e) !important;
+}
+
+[data-theme="dark"] .saw-invitation-email-section .sa-form-label,
+.dark-mode .saw-invitation-email-section .sa-form-label {
+    color: var(--saw-success-light, #86efac) !important;
+}
+
+[data-theme="dark"] .saw-field-hint,
+.dark-mode .saw-field-hint {
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--saw-success-light, #86efac);
+}
+
+[data-theme="dark"] .saw-important-input,
+.dark-mode .saw-important-input {
+    background: var(--saw-bg-surface, #0f172a) !important;
+    color: var(--saw-text-primary, #f1f5f9) !important;
+}

@@ -71,8 +71,21 @@ if (!empty($item['id'])) {
     ), ARRAY_A);
 }
 
+// Load individual visitors for this visit
+$visit_visitors = array();
+if (!empty($item['id'])) {
+    $visit_visitors = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, first_name, last_name, email, phone, profession 
+         FROM %i 
+         WHERE visit_id = %d 
+         ORDER BY id ASC",
+        $wpdb->prefix . 'saw_visitors',
+        $item['id']
+    ), ARRAY_A);
+}
+
 // Get visitor count
-$visitors_count = intval($item['visitor_count'] ?? 0);
+$visitors_count = intval($item['visitor_count'] ?? count($visit_visitors));
 
 // Determine visitor type
 $is_physical_person = empty($item['company_id']);
@@ -180,6 +193,92 @@ if (!empty($item['id'])) {
             $item['id']
         ), ARRAY_A);
     }
+}
+?>
+
+<?php
+// ============================================
+// BUILD HEADER BADGES FOR BENTO
+// ============================================
+$badges = [];
+
+// Status badge
+$status_colors = [
+    'draft' => 'secondary',
+    'pending' => 'warning',
+    'confirmed' => 'success',
+    'in_progress' => 'info',
+    'completed' => 'primary',
+    'cancelled' => 'danger',
+];
+
+$badges[] = [
+    'label' => $all_statuses[$current_status]['label'] ?? $current_status,
+    'variant' => $status_colors[$current_status] ?? 'secondary',
+    'icon' => $all_statuses[$current_status]['icon'] ?? '📋',
+];
+
+// Visitor type badge
+if ($is_physical_person) {
+    $badges[] = [
+        'label' => $tr('visitor_physical', 'Fyzická osoba'),
+        'variant' => 'info',
+        'icon' => '👤',
+    ];
+} else {
+    $badges[] = [
+        'label' => $tr('visitor_company', 'Firma'),
+        'variant' => 'primary',
+        'icon' => '🏢',
+    ];
+}
+
+// Build title
+$visit_title = '';
+if ($is_physical_person) {
+    $visit_title = $item['first_visitor_name'] ?? $tr('not_specified', 'Neuvedeno');
+} else {
+    $visit_title = $item['company_name'] ?? $tr('not_specified', 'Neuvedeno');
+}
+
+// Subtitle with branch
+$visit_subtitle = !empty($item['branch_name']) 
+    ? $item['branch_name'] 
+    : $tr('no_branch', 'Bez pobočky');
+?>
+
+<div class="sa-detail-wrapper bento-wrapper">
+<?php 
+// Initialize Bento Header
+if (function_exists('saw_bento_start')) {
+    
+    // Start Bento Grid
+    saw_bento_start('bento-visits');
+    
+    // HEADER
+    saw_bento_header([
+        'icon' => 'clipboard-list',
+        'module' => 'visits',
+        'module_label' => $tr('module_name', 'Návštěvy'),
+        'id' => $item['id'],
+        'title' => $visit_title,
+        'subtitle' => $visit_subtitle,
+        'badges' => $badges,
+        'nav_enabled' => true,
+        'stripe' => true,
+        'close_url' => $close_url ?? home_url('/admin/visits/'),
+    ]);
+    
+    // STATISTICS
+    saw_bento_stat([
+        'icon' => 'users',
+        'value' => $visitors_count,
+        'label' => $tr('stat_visitors', 'Návštěvníků'),
+        'variant' => 'default',
+    ]);
+    
+    // End Bento grid (continue with custom sections below)
+    saw_bento_end();
 }
 ?>
 
@@ -408,59 +507,7 @@ $has_invitation_email = !empty($item['invitation_email']);
 ?>
 
 <div class="saw-detail-cards-stack">
-    <!-- VISITOR CARD -->
-    <div class="saw-info-item" style="grid-column: 1 / -1; width: 100%;">
-    <div class="saw-visitor-card">
-        <div class="saw-visitor-card-inner">
-            <div class="saw-visitor-card-left">
-                <div class="saw-visitor-icon <?php echo $is_physical_person ? 'saw-visitor-icon-person' : 'saw-visitor-icon-company'; ?>">
-                    <?php if ($is_physical_person): ?>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <?php else: ?>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 21h18"/>
-                        <path d="M5 21V7l8-4v18"/>
-                        <path d="M19 21V11l-6-4"/>
-                        <path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>
-                    </svg>
-                    <?php endif; ?>
-                </div>
-                <div class="saw-visitor-card-info">
-                    <div class="saw-visitor-card-label">
-                        <span><?php echo esc_html($tr('section_visitor', 'Návštěvník')); ?></span>
-                        <span class="saw-visitor-type-badge <?php echo $is_physical_person ? 'saw-type-person' : 'saw-type-company'; ?>">
-                            <?php echo $is_physical_person ? esc_html($tr('visitor_physical', 'Fyzická osoba')) : esc_html($tr('visitor_company', 'Firma')); ?>
-                        </span>
-                    </div>
-                    <div class="saw-visitor-card-name">
-                        <?php if ($is_physical_person): ?>
-                            <?php echo esc_html($item['first_visitor_name'] ?? $tr('not_specified', 'Neuvedeno')); ?>
-                        <?php else: ?>
-                            <?php echo esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']); ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <div class="saw-visitor-card-right">
-                <div class="saw-visitor-count-box">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    <span class="saw-visitor-count-number"><?php echo $visitors_count; ?></span>
-                    <span class="saw-visitor-count-label"><?php echo $person_count_label($visitors_count); ?></span>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-
-    <!-- INVITATION CARD -->
+    <!-- INVITATION CARD (MOVED TO TOP FOR PROMINENCE) -->
     <?php if ($has_invitation_email): ?>
     <div class="saw-invitation-card">
         <div class="saw-invitation-card-inner">
@@ -527,6 +574,84 @@ $has_invitation_email = !empty($item['invitation_email']);
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- VISITOR SECTION - COMBINED CARD WITH VISITOR LIST -->
+    <div class="saw-visitor-section">
+        <!-- Section Header -->
+        <div class="saw-visitor-section-header">
+            <div class="saw-visitor-section-title">
+                <div class="saw-visitor-icon <?php echo $is_physical_person ? 'saw-visitor-icon-person' : 'saw-visitor-icon-company'; ?>">
+                    <?php if ($is_physical_person): ?>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <?php else: ?>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21h18"/>
+                        <path d="M5 21V7l8-4v18"/>
+                        <path d="M19 21V11l-6-4"/>
+                    </svg>
+                    <?php endif; ?>
+                </div>
+                <div class="saw-visitor-section-info">
+                    <span class="saw-visitor-section-label"><?php echo esc_html($tr('section_visitor', 'Návštěvník')); ?></span>
+                    <span class="saw-visitor-section-name">
+                        <?php if ($is_physical_person): ?>
+                            <?php echo esc_html($item['first_visitor_name'] ?? $tr('not_specified', 'Neuvedeno')); ?>
+                        <?php else: ?>
+                            <?php echo esc_html($item['company_name'] ?? 'Firma #' . $item['company_id']); ?>
+                        <?php endif; ?>
+                    </span>
+                </div>
+            </div>
+            <div class="saw-visitor-section-badges">
+                <span class="saw-visitor-type-badge <?php echo $is_physical_person ? 'saw-type-person' : 'saw-type-company'; ?>">
+                    <?php echo $is_physical_person ? esc_html($tr('visitor_physical', 'Fyzická osoba')) : esc_html($tr('visitor_company', 'Firma')); ?>
+                </span>
+                <span class="saw-visitor-count-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <?php echo $visitors_count; ?> <?php echo $person_count_label($visitors_count); ?>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Visitors List -->
+        <?php if (!empty($visit_visitors)): ?>
+        <div class="saw-visitor-section-body">
+            <?php foreach ($visit_visitors as $visitor): ?>
+            <a href="<?php echo esc_url(home_url('/admin/visitors/' . $visitor['id'] . '/')); ?>" class="saw-visitor-list-item">
+                <div class="saw-visitor-list-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <div class="saw-visitor-list-info">
+                    <div class="saw-visitor-list-name">
+                        <?php echo esc_html(trim($visitor['first_name'] . ' ' . $visitor['last_name'])); ?>
+                    </div>
+                    <?php if (!empty($visitor['profession'])): ?>
+                    <div class="saw-visitor-list-profession"><?php echo esc_html($visitor['profession']); ?></div>
+                    <?php elseif (!empty($visitor['email'])): ?>
+                    <div class="saw-visitor-list-email"><?php echo esc_html($visitor['email']); ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="saw-visitor-list-arrow">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
 
     <!-- PURPOSE CARD -->
     <?php if (!empty($item['purpose'])): ?>
@@ -3284,3 +3409,4 @@ if (!document.getElementById('saw-spinner-style')) {
     document.head.appendChild(style);
 }
 </script>
+</div><!-- /.sa-detail-wrapper bento-wrapper -->

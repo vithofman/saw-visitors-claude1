@@ -388,8 +388,8 @@ if (!empty($item['is_archived'])) {
         }
     };
     
-    // Load auto detection
-    function loadAutoDetection() {
+    // Load auto detection (global so it can be called from merge card)
+    window.loadAutoDetection = function() {
         var $content = $('#sawMergeAutoContent');
         var entityId = $('.bento-merge').data('entity-id');
         
@@ -405,12 +405,18 @@ if (!empty($item['is_archived'])) {
             },
             success: function(response) {
                 $content.html(response);
+                
+                // Count duplicates and update badge
+                var duplicateCount = $content.find('.saw-duplicate-item, .bento-merge-item').length;
+                if (typeof updateMergeBadge === 'function') {
+                    updateMergeBadge(duplicateCount);
+                }
             },
             error: function() {
                 $content.html('<div class="bento-merge-error">❌ <?php echo esc_js($tr('error_loading', 'Chyba při načítání')); ?></div>');
             }
         });
-    }
+    };
     
     // Filter manual list
     window.filterManualList = function() {
@@ -502,8 +508,9 @@ if (!empty($item['is_archived'])) {
             showMerge();
         });
         
-        // Auto-load duplicate detection since merge is auto-expanded
-        if ($('#sawMergeContainer').hasClass('active')) {
+        // Always load duplicate detection to populate badge
+        // (works even when merge section is collapsed)
+        if ($('.bento-merge').length) {
             loadAutoDetection();
         }
     });

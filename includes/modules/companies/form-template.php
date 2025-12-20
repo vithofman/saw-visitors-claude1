@@ -86,7 +86,7 @@ if ($is_edit && !empty($item['branch_id'])) {
 <?php endif; ?>
 
 <div class="sa-form-container">
-    <form method="post" action="" enctype="multipart/form-data" class="sa-form" id="saw-companies-form">
+    <form method="post" action="" enctype="multipart/form-data" class="sa-form saw-companies-form" id="saw-companies-form" data-module="companies">
         <?php
         $nonce_action = $is_edit ? 'saw_edit_companies' : 'saw_create_companies';
         wp_nonce_field($nonce_action, '_wpnonce', false);

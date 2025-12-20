@@ -13,9 +13,10 @@
     background: rgba(0, 0, 0, 0.5);
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--saw-transition-base), 
-                visibility var(--saw-transition-base);
-    z-index: 9997; /* Below bottom-nav (10001) and sidebar-nav overlay (9998) */
+    transition: opacity var(--saw-transition-base),
+        visibility var(--saw-transition-base);
+    z-index: 9997;
+    /* Below bottom-nav (10001) and sidebar-nav overlay (9998) */
 }
 
 .sa-detail-sidebar-overlay--active {
@@ -33,17 +34,18 @@
     bottom: 0;
     width: 720px;
     max-width: 100%;
-    
+
     /* Flexbox layout for header/content/footer */
     display: flex !important;
     flex-direction: column !important;
-    
+
     background: var(--saw-bg-primary);
     box-shadow: var(--saw-shadow-xl);
     transform: translateX(100%);
     transition: transform var(--saw-transition-base);
-    z-index: 10000; /* Above overlay (9997), below bottom-nav (10001) */
-    
+    z-index: 10000;
+    /* Above overlay (9997), below bottom-nav (10001) */
+
     /* Use dvh for better mobile support, fallback to vh */
     height: 100vh;
     height: 100dvh;
@@ -139,14 +141,15 @@
 @media (max-width: 1024px) and (min-width: 769px) {
     .sa-sidebar-fab-container {
         right: 12px;
-        bottom: 80px; /* Above bottom-nav */
+        bottom: 80px;
+        /* Above bottom-nav */
     }
-    
+
     .sa-sidebar-fab {
         width: 44px;
         height: 44px;
     }
-    
+
     .sa-sidebar-fab svg {
         width: 18px;
         height: 18px;
@@ -157,9 +160,10 @@
 @media (max-width: 768px) {
     .sa-sidebar-fab-container {
         right: 12px;
-        bottom: 70px; /* Above bottom-nav */
+        bottom: 70px;
+        /* Above bottom-nav */
     }
-    
+
     .sa-sidebar-fab {
         width: 44px;
         height: 44px;
@@ -221,22 +225,28 @@
 }
 
 @keyframes saw-fab-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Responsive - tablet */
 @media (max-width: 1024px) and (min-width: 769px) {
     .sa-sidebar-fab-container--form {
         right: 12px;
-        bottom: 80px; /* Above bottom-nav */
+        bottom: 80px;
+        /* Above bottom-nav */
     }
-    
+
     .sa-sidebar-fab--save {
         width: 52px;
         height: 52px;
     }
-    
+
     .sa-sidebar-fab--save svg {
         width: 22px;
         height: 22px;
@@ -244,14 +254,109 @@
 }
 
 /* Responsive - mobile */
+.sa-sidebar-fab-container--form {
+    right: 12px;
+    bottom: 70px;
+    /* Above bottom-nav */
+}
+
+.sa-sidebar-fab--save {
+    width: 52px;
+    height: 52px;
+}
+}
+
+/* ============================================
+   NESTED SIDEBAR STYLING
+   Layered effect for inline create forms
+   ============================================ */
+
+/* Parent sidebar when nested is open */
+.saw-sidebar-wrapper.has-nested {
+    pointer-events: none;
+}
+
+.saw-sidebar-wrapper.has-nested .saw-sidebar {
+    opacity: 0.4;
+    filter: brightness(0.7);
+    transform: scale(0.98) translateX(-20px);
+    transition: all 0.3s ease;
+}
+
+/* Nested sidebar wrapper */
+.saw-sidebar-wrapper[data-is-nested="1"] {
+    /* Same positioning as parent */
+}
+
+/* Nested sidebar - layered look */
+.saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar {
+    width: calc(100% - 30px);
+    /* Slightly narrower */
+    max-width: 700px;
+    margin-left: 15px;
+    box-shadow:
+        -8px 0 30px rgba(0, 0, 0, 0.2),
+        -2px 0 10px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--saw-brand-500, #3b82f6);
+    animation: saw-nested-slide-in 0.3s ease;
+}
+
+@keyframes saw-nested-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Nested header special styling */
+.saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar-header {
+    background: linear-gradient(135deg, var(--saw-brand-600, #2563eb) 0%, var(--saw-brand-500, #3b82f6) 100%);
+    border-bottom: none;
+}
+
+.saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar-header .saw-sidebar-title {
+    color: #ffffff;
+}
+
+/* Nested close button */
+.saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar-close {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile - nested is fullscreen */
 @media (max-width: 768px) {
-    .sa-sidebar-fab-container--form {
-        right: 12px;
-        bottom: 70px; /* Above bottom-nav */
+    .saw-sidebar-wrapper.has-nested .saw-sidebar {
+        transform: none;
+        opacity: 0;
+        pointer-events: none;
     }
-    
-    .sa-sidebar-fab--save {
-        width: 52px;
-        height: 52px;
+
+    .saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar {
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+        border-left: none;
     }
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .saw-sidebar-wrapper.has-nested .saw-sidebar,
+.dark-mode .saw-sidebar-wrapper.has-nested .saw-sidebar {
+    filter: brightness(0.5);
+}
+
+[data-theme="dark"] .saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar,
+.dark-mode .saw-sidebar-wrapper[data-is-nested="1"] .saw-sidebar {
+    box-shadow:
+        -8px 0 30px rgba(0, 0, 0, 0.5),
+        -2px 0 10px rgba(0, 0, 0, 0.3);
 }

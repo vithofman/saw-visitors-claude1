@@ -58,7 +58,11 @@ class SAW_Bento_Header extends SAW_Bento_Card {
             
             <!-- Navigation bar -->
             <div class="bento-header-nav">
-                <div class="bento-header-nav-left">
+                <?php if ($breadcrumb): ?>
+                <span class="bento-header-breadcrumb"><?php echo esc_html($breadcrumb); ?></span>
+                <?php endif; ?>
+                
+                <div class="bento-header-nav-right">
                     <?php if ($args['nav_enabled']): ?>
                     <button type="button" 
                             class="bento-nav-btn sa-sidebar-prev" 
@@ -73,21 +77,17 @@ class SAW_Bento_Header extends SAW_Bento_Card {
                         <?php $this->render_icon('chevron-right'); ?>
                     </button>
                     <?php endif; ?>
+                    
+                    <?php if (!empty($args['close_url'])): ?>
+                    <a href="<?php echo esc_url($args['close_url']); ?>" class="bento-nav-btn bento-nav-close sa-sidebar-close" title="Zavřít">
+                        <?php $this->render_icon('x'); ?>
+                    </a>
+                    <?php else: ?>
+                    <button type="button" class="bento-nav-btn bento-nav-close sa-sidebar-close" title="Zavřít">
+                        <?php $this->render_icon('x'); ?>
+                    </button>
+                    <?php endif; ?>
                 </div>
-                
-                <?php if ($breadcrumb): ?>
-                <span class="bento-header-breadcrumb"><?php echo esc_html($breadcrumb); ?></span>
-                <?php endif; ?>
-                
-                <?php if (!empty($args['close_url'])): ?>
-                <a href="<?php echo esc_url($args['close_url']); ?>" class="bento-nav-btn bento-nav-close sa-sidebar-close" title="Zavřít">
-                    <?php $this->render_icon('x'); ?>
-                </a>
-                <?php else: ?>
-                <button type="button" class="bento-nav-btn bento-nav-close sa-sidebar-close" title="Zavřít">
-                    <?php $this->render_icon('x'); ?>
-                </button>
-                <?php endif; ?>
             </div>
             
             <!-- Content -->

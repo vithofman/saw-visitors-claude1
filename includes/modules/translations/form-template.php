@@ -39,12 +39,12 @@ $form_action = $is_edit
 ?>
 
 <?php if (!$in_sidebar): ?>
-<div class="saw-page-header">
-    <div class="saw-page-header-content">
-        <h1 class="saw-page-title">
+<div class="sa-page-header">
+    <div class="sa-page-header-content">
+        <h1 class="sa-page-title">
             <?php echo $is_edit ? esc_html($tr('form_title_edit', 'Upravit překlad')) : esc_html($tr('form_title_create', 'Nový překlad')); ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/translations/')); ?>" class="saw-back-button">
+        <a href="<?php echo esc_url(home_url('/admin/translations/')); ?>" class="sa-back-button">
             <?php if (class_exists('SAW_Icons')): ?>
                 <?php echo SAW_Icons::get('chevron-left'); ?>
             <?php else: ?>
@@ -56,8 +56,8 @@ $form_action = $is_edit
 </div>
 <?php endif; ?>
 
-<div class="saw-form-container saw-module-translations">
-    <form method="POST" action="<?php echo esc_url($form_action); ?>" class="saw-translation-form">
+<div class="sa-form-container sa-module-translations">
+    <form method="POST" action="<?php echo esc_url($form_action); ?>" class="sa-form sa-translation-form">
         <?php 
         $nonce_action = $is_edit ? 'saw_edit_translations' : 'saw_create_translations';
         wp_nonce_field($nonce_action, '_wpnonce', false);
@@ -68,34 +68,34 @@ $form_action = $is_edit
         <?php endif; ?>
         
         <!-- BASIC INFORMATION -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary style="display: flex; align-items: center; gap: 10px;">
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('globe', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('globe', 'sa-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-translation" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
                 <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_basic', 'Základní informace')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="translation_key" class="saw-label saw-required"><?php echo esc_html($tr('form_translation_key', 'Klíč překladu')); ?></label>
+                <div class="sa-form-row">
+                    <div class="sa-form-group sa-col-6">
+                        <label for="translation_key" class="sa-form-label sa-required"><?php echo esc_html($tr('form_translation_key', 'Klíč překladu')); ?></label>
                         <input type="text" 
                                id="translation_key" 
                                name="translation_key" 
-                               class="saw-input" 
+                               class="sa-input" 
                                value="<?php echo esc_attr($item['translation_key'] ?? ''); ?>" 
                                maxlength="100"
                                required
                                placeholder="<?php echo esc_attr($tr('form_translation_key_placeholder', 'např. button_save')); ?>">
-                        <small class="saw-form-help"><?php echo esc_html($tr('form_translation_key_help', 'Unikátní identifikátor překladu')); ?></small>
+                        <small class="sa-form-help"><?php echo esc_html($tr('form_translation_key_help', 'Unikátní identifikátor překladu')); ?></small>
                     </div>
                     
-                    <div class="saw-form-group saw-col-6">
-                        <label for="language_code" class="saw-label saw-required"><?php echo esc_html($tr('form_language_code', 'Kód jazyka')); ?></label>
-                        <select id="language_code" name="language_code" class="saw-input" required>
+                    <div class="sa-form-group sa-col-6">
+                        <label for="language_code" class="sa-form-label sa-required"><?php echo esc_html($tr('form_language_code', 'Kód jazyka')); ?></label>
+                        <select id="language_code" name="language_code" class="sa-input" required>
                             <option value="">-- <?php echo esc_html($tr('form_select_language', 'Vyberte jazyk')); ?> --</option>
                             <option value="cs" <?php selected($item['language_code'] ?? '', 'cs'); ?>>🇨🇿 Čeština</option>
                             <option value="en" <?php selected($item['language_code'] ?? '', 'en'); ?>>🇬🇧 English</option>
@@ -105,10 +105,10 @@ $form_action = $is_edit
                     </div>
                 </div>
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-6">
-                        <label for="context" class="saw-label saw-required"><?php echo esc_html($tr('form_context', 'Kontext')); ?></label>
-                        <select id="context" name="context" class="saw-input" required>
+                <div class="sa-form-row">
+                    <div class="sa-form-group sa-col-6">
+                        <label for="context" class="sa-form-label sa-required"><?php echo esc_html($tr('form_context', 'Kontext')); ?></label>
+                        <select id="context" name="context" class="sa-input" required>
                             <option value="">-- <?php echo esc_html($tr('form_select_context', 'Vyberte kontext')); ?> --</option>
                             <option value="terminal" <?php selected($item['context'] ?? '', 'terminal'); ?>>🖥️ Terminal</option>
                             <option value="invitation" <?php selected($item['context'] ?? '', 'invitation'); ?>>📧 Pozvánka</option>
@@ -117,16 +117,16 @@ $form_action = $is_edit
                         </select>
                     </div>
                     
-                    <div class="saw-form-group saw-col-6">
-                        <label for="section" class="saw-label"><?php echo esc_html($tr('form_section', 'Sekce')); ?></label>
+                    <div class="sa-form-group sa-col-6">
+                        <label for="section" class="sa-form-label"><?php echo esc_html($tr('form_section', 'Sekce')); ?></label>
                         <input type="text" 
                                id="section" 
                                name="section" 
-                               class="saw-input" 
+                               class="sa-input" 
                                value="<?php echo esc_attr($item['section'] ?? ''); ?>" 
                                maxlength="50"
                                placeholder="<?php echo esc_attr($tr('form_section_placeholder', 'např. video, risks')); ?>">
-                        <small class="saw-form-help"><?php echo esc_html($tr('form_section_help', 'Volitelné - pro seskupení překladů')); ?></small>
+                        <small class="sa-form-help"><?php echo esc_html($tr('form_section_help', 'Volitelné - pro seskupení překladů')); ?></small>
                     </div>
                 </div>
                 
@@ -134,26 +134,26 @@ $form_action = $is_edit
         </details>
         
         <!-- TRANSLATION TEXT -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary style="display: flex; align-items: center; gap: 10px;">
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('pencil', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('pencil', 'sa-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-edit" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
                 <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_text', 'Text překladu')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="translation_text" class="saw-label saw-required"><?php echo esc_html($tr('form_translation_text', 'Text překladu')); ?></label>
+                <div class="sa-form-row">
+                    <div class="sa-form-group sa-col-12">
+                        <label for="translation_text" class="sa-form-label sa-required"><?php echo esc_html($tr('form_translation_text', 'Text překladu')); ?></label>
                         <textarea id="translation_text" 
                                   name="translation_text" 
-                                  class="saw-input" 
+                                  class="sa-input" 
                                   rows="5"
                                   required><?php echo esc_textarea($item['translation_text'] ?? ''); ?></textarea>
-                        <small class="saw-form-help"><?php echo esc_html($tr('form_translation_text_help', 'Hlavní text překladu')); ?></small>
+                        <small class="sa-form-help"><?php echo esc_html($tr('form_translation_text_help', 'Hlavní text překladu')); ?></small>
                     </div>
                 </div>
                 
@@ -161,42 +161,42 @@ $form_action = $is_edit
         </details>
         
         <!-- ADDITIONAL INFORMATION -->
-        <details class="saw-form-section">
+        <details class="sa-form-section">
             <summary style="display: flex; align-items: center; gap: 10px;">
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('info', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('info', 'sa-section-icon'); ?>
                 <?php else: ?>
                     <span class="dashicons dashicons-info" style="display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important;"></span>
                 <?php endif; ?>
                 <strong><?php echo esc_html($tr('form_section_additional', 'Další informace')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="description" class="saw-label"><?php echo esc_html($tr('form_description', 'Popis')); ?></label>
+                <div class="sa-form-row">
+                    <div class="sa-form-group sa-col-12">
+                        <label for="description" class="sa-form-label"><?php echo esc_html($tr('form_description', 'Popis')); ?></label>
                         <input type="text" 
                                id="description" 
                                name="description" 
-                               class="saw-input" 
+                               class="sa-input" 
                                value="<?php echo esc_attr($item['description'] ?? ''); ?>" 
                                maxlength="255"
                                placeholder="<?php echo esc_attr($tr('form_description_placeholder', 'Popis pro admina')); ?>">
-                        <small class="saw-form-help"><?php echo esc_html($tr('form_description_help', 'Volitelný popis pro lepší orientaci')); ?></small>
+                        <small class="sa-form-help"><?php echo esc_html($tr('form_description_help', 'Volitelný popis pro lepší orientaci')); ?></small>
                     </div>
                 </div>
                 
-                <div class="saw-form-row">
-                    <div class="saw-form-group saw-col-12">
-                        <label for="placeholders" class="saw-label"><?php echo esc_html($tr('form_placeholders', 'Placeholdery')); ?></label>
+                <div class="sa-form-row">
+                    <div class="sa-form-group sa-col-12">
+                        <label for="placeholders" class="sa-form-label"><?php echo esc_html($tr('form_placeholders', 'Placeholdery')); ?></label>
                         <input type="text" 
                                id="placeholders" 
                                name="placeholders" 
-                               class="saw-input" 
+                               class="sa-input" 
                                value="<?php echo esc_attr($item['placeholders'] ?? ''); ?>" 
                                maxlength="255"
                                placeholder="<?php echo esc_attr($tr('form_placeholders_placeholder', 'např. {name}, {date}')); ?>">
-                        <small class="saw-form-help"><?php echo esc_html($tr('form_placeholders_help', 'Seznam dostupných placeholderů oddělených čárkou')); ?></small>
+                        <small class="sa-form-help"><?php echo esc_html($tr('form_placeholders_help', 'Seznam dostupných placeholderů oddělených čárkou')); ?></small>
                     </div>
                 </div>
                 
@@ -207,11 +207,11 @@ $form_action = $is_edit
         // Form actions - only show outside sidebar (sidebar uses FAB save button)
         if (!$in_sidebar): 
         ?>
-        <div class="saw-form-actions">
-            <button type="submit" class="saw-button saw-button-primary">
+        <div class="sa-form-actions">
+            <button type="submit" class="sa-button sa-button--primary">
                 <?php echo $is_edit ? esc_html($tr('btn_save_changes', 'Uložit změny')) : esc_html($tr('btn_create_translation', 'Vytvořit překlad')); ?>
             </button>
-            <a href="<?php echo esc_url(home_url('/admin/translations/')); ?>" class="saw-button saw-button-secondary">
+            <a href="<?php echo esc_url(home_url('/admin/translations/')); ?>" class="sa-button sa-button--secondary">
                 <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
             </a>
         </div>

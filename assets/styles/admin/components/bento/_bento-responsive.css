@@ -12,72 +12,237 @@
         --bento-grid-columns: 2;
         --bento-card-padding: 16px;
     }
-    
+
     .bento-header-title {
         font-size: 1.5rem;
     }
-    
+
     .bento-stat-value {
         font-size: 1.75rem;
     }
 }
 
 /* ===== MOBILE (max-width: 640px) ===== */
+/* NOTE: Keep 640px for standalone bento outside sidebar */
 @media (max-width: 640px) {
     :root {
         --bento-grid-columns: 1;
-        --bento-grid-gap: 12px;
-        --bento-card-radius: 16px;
-        --bento-header-radius: 20px;
+        --bento-grid-gap: 8px;
+        --bento-card-radius: 12px;
+        --bento-header-radius: 0;
+        /* Full width in sidebar */
+        --bento-card-padding: 12px;
     }
-    
+
     .bento-header-nav {
         padding: 12px 16px;
     }
-    
+
     .bento-header-content {
         padding: 0 16px 16px;
     }
-    
+
     .bento-header-title {
         font-size: 1.375rem;
     }
-    
+
     .bento-header-badges {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .bento-nav-btn {
         width: 32px;
         height: 32px;
     }
-    
+
     .bento-card-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
+
     .bento-info-field {
         flex-direction: column;
         align-items: flex-start;
         gap: 4px;
     }
-    
+
     .bento-info-label {
         width: auto;
     }
-    
+
     /* Disable hover effects on touch */
     .bento-card:hover {
         transform: none;
         box-shadow: var(--bento-card-shadow);
     }
-    
+
     .bento-list-item-arrow {
         opacity: 1;
         transform: translateX(0);
+    }
+}
+
+/* ===== SIDEBAR MOBILE OVERRIDE (768px) ===== */
+/* Sidebar on mobile needs different rules than standalone bento */
+/* Typography uses --saw-text-* tokens from _tokens.css for consistency */
+@media (max-width: 768px) {
+    .sa-sidebar .bento-grid {
+        --bento-grid-columns: 1;
+        --bento-grid-gap: var(--saw-space-2, 8px);
+    }
+
+    .sa-sidebar .bento-header {
+        border-radius: 0;
+    }
+
+    .sa-sidebar .bento-card {
+        --bento-card-padding: var(--saw-space-3, 12px);
+        --bento-card-radius: var(--saw-radius-xl, 12px);
+    }
+
+    /* ==========================================
+       FIX: CENTER ALL ICONS
+       Using position absolute for guaranteed centering
+       ========================================== */
+
+    /* Header icon centering */
+    .sa-sidebar .bento-header-icon {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+    }
+
+    .sa-sidebar .bento-header-icon svg,
+    .sa-sidebar .bento-header-icon .saw-icon {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+    }
+
+    /* Card icon centering */
+    .sa-sidebar .bento-card-icon {
+        width: var(--saw-icon-xl, 32px);
+        height: var(--saw-icon-xl, 32px);
+        flex-shrink: 0;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+    }
+
+    .sa-sidebar .bento-card-icon svg,
+    .sa-sidebar .bento-card-icon .saw-icon {
+        width: var(--saw-icon-sm, 16px) !important;
+        height: var(--saw-icon-sm, 16px) !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+    }
+
+    /* Stat icon centering - handled in _bento-stats.css */
+    .sa-sidebar .bento-stat-icon {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+    }
+
+    /* ==========================================
+       KEEP CARD HEADERS HORIZONTAL
+       ========================================== */
+    .sa-sidebar .bento-card-header {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: var(--saw-space-2, 8px);
+        margin-bottom: var(--saw-space-2, 8px);
+    }
+
+    .sa-sidebar .bento-card-title {
+        font-size: var(--saw-text-base, 14px);
+        font-weight: var(--saw-font-semibold, 600);
+        font-family: var(--saw-font-body);
+    }
+
+    /* Hide contact section header icon on mobile (matches tablet/PC) */
+    .sa-sidebar .bento-contact .bento-card-header .bento-card-icon {
+        display: none !important;
+    }
+
+    /* ==========================================
+       KEEP INFO FIELDS HORIZONTAL
+       ========================================== */
+    .sa-sidebar .bento-info-field {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: var(--saw-space-2, 8px);
+        padding: var(--saw-space-1, 4px) 0;
+    }
+
+    .sa-sidebar .bento-info-label {
+        width: 60px !important;
+        flex-shrink: 0;
+        font-size: var(--saw-text-xs, 12px);
+        font-weight: var(--saw-font-medium, 500);
+        font-family: var(--saw-font-body);
+        color: var(--saw-text-muted);
+    }
+
+    .sa-sidebar .bento-info-value {
+        font-size: var(--saw-text-sm, 13px);
+        font-weight: var(--saw-font-medium, 500);
+        font-family: var(--saw-font-body);
+        color: var(--saw-text-primary);
+    }
+
+    /* ==========================================
+       KEEP ADDRESS FIELDS HORIZONTAL
+       ========================================== */
+    .sa-sidebar .bento-address-row {
+        flex-direction: row !important;
+        gap: var(--saw-space-3, 12px);
+    }
+
+    .sa-sidebar .bento-address-field {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sa-sidebar .bento-address-label {
+        font-size: var(--saw-text-xs, 12px);
+        font-weight: var(--saw-font-medium, 500);
+        font-family: var(--saw-font-body);
+        color: var(--saw-text-muted);
+        margin-bottom: 2px;
+    }
+
+    .sa-sidebar .bento-address-value {
+        font-size: var(--saw-text-sm, 13px);
+        font-weight: var(--saw-font-medium, 500);
+        font-family: var(--saw-font-body);
+        color: var(--saw-text-primary);
+    }
+
+    /* ==========================================
+       STAT CARD TYPOGRAPHY
+       ========================================== */
+    .sa-sidebar .bento-stat-value {
+        font-size: var(--saw-text-xl, 18px);
+        font-weight: var(--saw-font-bold, 700);
+        font-family: var(--saw-font-body);
+    }
+
+    .sa-sidebar .bento-stat-label {
+        font-size: var(--saw-text-xs, 12px);
+        font-weight: var(--saw-font-medium, 500);
+        font-family: var(--saw-font-body);
+        color: var(--saw-text-muted);
     }
 }
 
@@ -86,16 +251,16 @@
     .bento-header-breadcrumb {
         display: none;
     }
-    
+
     .bento-header-icon {
         width: 44px;
         height: 44px;
     }
-    
+
     .bento-stat-value {
         font-size: 1.5rem;
     }
-    
+
     .bento-address-row {
         flex-direction: column;
         gap: 8px;
@@ -104,21 +269,22 @@
 
 /* ===== TOUCH DEVICES ===== */
 @media (hover: none) and (pointer: coarse) {
+
     /* Larger touch targets */
     .bento-nav-btn {
         min-width: 44px;
         min-height: 44px;
     }
-    
+
     .bento-list-item {
         min-height: 48px;
     }
-    
+
     /* Disable hover transforms */
     .bento-card:hover {
         transform: none;
     }
-    
+
     /* Always show arrows on touch */
     .bento-list-item-arrow {
         opacity: 0.5;
@@ -131,20 +297,20 @@
     .bento-grid {
         display: block;
     }
-    
+
     .bento-card {
         break-inside: avoid;
         box-shadow: none;
         border: 1px solid #ccc;
         margin-bottom: 16px;
     }
-    
+
     .bento-header {
         background: #005A8C !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    
+
     .bento-nav-btn,
     .bento-text-toggle,
     .bento-copy-btn {
@@ -154,19 +320,19 @@
 
 /* ===== REDUCED MOTION ===== */
 @media (prefers-reduced-motion: reduce) {
+
     .bento-card,
     .bento-nav-btn,
     .bento-list-item,
     .bento-text-toggle-icon {
         transition: none;
     }
-    
+
     .bento-badge-dot {
         animation: none;
     }
-    
+
     .bento-card:hover {
         transform: none;
     }
 }
-

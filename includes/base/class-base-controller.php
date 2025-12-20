@@ -1943,10 +1943,10 @@ protected function can($action) {
         }
         
         // NOVÁ jednoduchá verze - no grouping
-        $row_class = 'saw-table-row';
+        $row_class = 'sa-table-row';
         
         if (!empty($detail_url)) {
-            $row_class .= ' saw-clickable-row';
+            $row_class .= ' sa-table-row--clickable';
         }
         
         ?>

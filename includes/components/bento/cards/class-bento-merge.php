@@ -64,39 +64,40 @@ class SAW_Bento_Merge extends SAW_Bento_Card {
             $this->get_colspan_class($args['colspan']),
         ]);
         ?>
-        <div class="<?php echo esc_attr($classes); ?>" data-entity-id="<?php echo intval($args['entity_id']); ?>" data-entity-type="<?php echo esc_attr($args['entity_type']); ?>">
+        <div class="<?php echo esc_attr($classes); ?>" 
+             data-entity-id="<?php echo intval($args['entity_id']); ?>" 
+             data-entity-type="<?php echo esc_attr($args['entity_type']); ?>"
+             data-collapsed="true">
             
-            <!-- Warning Box (hidden - auto-expand is enabled) -->
-            <div class="bento-merge-warning" style="display: none;">
-                <div class="bento-merge-warning-icon">
-                    <?php $this->render_icon('alert-triangle'); ?>
+            <!-- Collapsed Header (always visible, clickable to expand) -->
+            <div class="bento-merge-collapsed-header" onclick="toggleMergeSection(this)">
+                <div class="bento-merge-collapsed-icon">
+                    <?php $this->render_icon('git-merge'); ?>
                 </div>
-                <div class="bento-merge-warning-content">
-                    <strong class="bento-merge-warning-title">
-                        <?php echo esc_html($args['warning_title']); ?>
-                    </strong>
-                    <p class="bento-merge-warning-text">
-                        <?php echo esc_html($args['warning_text']); ?>
-                    </p>
+                <span class="bento-merge-collapsed-title">
+                    <?php echo esc_html($tr('merge_control_title', 'Kontrola duplicit')); ?>
+                </span>
+                <span class="bento-merge-badge" id="mergeBadge" style="display:none">
+                    <span class="bento-merge-badge-count">0</span>
+                </span>
+                <div class="bento-merge-chevron">
+                    <?php $this->render_icon('chevron-down'); ?>
                 </div>
-                <button type="button" class="bento-merge-check-btn" id="sawMergeBtn">
-                    <?php $this->render_icon('search', 'bento-merge-check-icon'); ?>
-                    <?php echo esc_html($args['check_btn_label']); ?>
-                </button>
             </div>
             
-            <!-- Merge Container (auto-expanded) -->
-            <div class="bento-merge-container active" id="sawMergeContainer">
-                <div class="bento-merge-header">
-                    <div class="bento-merge-header-title">
-                        <?php $this->render_icon('git-merge', 'bento-merge-header-icon'); ?>
-                        <span><?php echo esc_html($tr('merge_title', 'Sloučit duplicity')); ?></span>
-                    </div>
-                    <button type="button" class="bento-merge-close" onclick="closeMerge()">
-                        <?php $this->render_icon('x'); ?>
-                    </button>
+            <!-- Warning Alert (shown when duplicates found) -->
+            <div class="bento-merge-alert" id="mergeAlert" style="display:none" onclick="toggleMergeSection(document.querySelector('.bento-merge-collapsed-header'))">
+                <div class="bento-merge-alert-icon">
+                    <?php $this->render_icon('alert-triangle'); ?>
                 </div>
-                
+                <div class="bento-merge-alert-content">
+                    <strong><?php echo esc_html($tr('duplicates_found_title', 'Nalezeny možné duplicity')); ?></strong>
+                    <p><?php echo esc_html($tr('duplicates_found_text', 'Zkontrolujte a případně sloučte podobné záznamy')); ?></p>
+                </div>
+            </div>
+            
+            <!-- Expandable Content -->
+            <div class="bento-merge-expandable" style="display: none;">
                 <div class="bento-merge-body">
                     <!-- Tabs -->
                     <div class="bento-merge-tabs">
@@ -172,6 +173,54 @@ class SAW_Bento_Merge extends SAW_Bento_Card {
                 </div>
             </div>
         </div>
+        
+        <script>
+        // Track if duplicates were found
+        var mergeHasDuplicates = false;
+        
+        // Toggle merge section expand/collapse
+        function toggleMergeSection(header) {
+            const card = header.closest('.bento-merge');
+            const isCollapsed = card.dataset.collapsed === 'true';
+            card.dataset.collapsed = !isCollapsed;
+            
+            const expandable = card.querySelector('.bento-merge-expandable');
+            const alert = document.getElementById('mergeAlert');
+            
+            expandable.style.display = isCollapsed ? 'block' : 'none';
+            
+            // Toggle alert visibility
+            if (alert && mergeHasDuplicates) {
+                // When expanding (isCollapsed was true) -> hide alert
+                // When collapsing (isCollapsed was false) -> show alert
+                alert.style.display = isCollapsed ? 'none' : 'flex';
+            }
+        }
+        
+        // Update badge and alert with duplicate count (called from detail-modal-template.php)
+        window.updateMergeBadge = function(count) {
+            const badge = document.getElementById('mergeBadge');
+            const alert = document.getElementById('mergeAlert');
+            const card = document.querySelector('.bento-merge');
+            
+            mergeHasDuplicates = count > 0;
+            
+            if (count > 0) {
+                // Show badge
+                if (badge) {
+                    badge.querySelector('.bento-merge-badge-count').textContent = count;
+                    badge.style.display = 'inline-flex';
+                    badge.classList.add('bento-merge-badge--pulse');
+                }
+                
+                // Show alert only if collapsed
+                if (alert && card && card.dataset.collapsed === 'true') {
+                    alert.style.display = 'flex';
+                }
+            }
+        };
+        </script>
         <?php
     }
 }
+

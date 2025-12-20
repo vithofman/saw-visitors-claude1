@@ -1,13 +1,14 @@
 <?php
 /**
- * Training Languages Detail Sidebar Template
+ * Training Languages Detail Sidebar Template - BENTO DESIGN
  *
- * Header with flag, code, branches count is rendered by detail-sidebar.php
- * via get_detail_header_meta() in controller.
+ * Moderní Bento Box design systém pro zobrazení detailu jazyka školení.
+ * Asymetrický grid s kartami různých velikostí.
  *
  * @package    SAW_Visitors
  * @subpackage Modules/TrainingLanguages
- * @version    5.0.0 - REDESIGNED: No hero card (in blue header), no ID
+ * @version    6.0.0 - BENTO DESIGN SYSTEM
+ * @since      4.0.0
  */
 
 if (!defined('ABSPATH')) {
@@ -34,7 +35,7 @@ $tr = function($key, $fallback = null) use ($t) {
 // VALIDATION
 // ============================================
 if (empty($item)) {
-    echo '<div class="saw-alert saw-alert-danger">' . esc_html($tr('error_not_found', 'Jazyk nebyl nalezen')) . '</div>';
+    echo '<div class="sa-alert sa-alert--danger">' . esc_html($tr('error_not_found', 'Jazyk nebyl nalezen')) . '</div>';
     return;
 }
 
@@ -50,162 +51,174 @@ $default_count = 0;
 foreach ($active_branches as $b) {
     if (!empty($b['is_default'])) $default_count++;
 }
+
+// ============================================
+// BUILD HEADER BADGES
+// ============================================
+$badges = [];
+
+if ($is_protected) {
+    $badges[] = [
+        'label' => $tr('badge_system_language', 'Systémový jazyk'),
+        'variant' => 'info',
+        'icon' => 'shield',
+    ];
+}
+
+if ($branches_count > 0) {
+    $badges[] = [
+        'label' => $branches_count . ' ' . $tr('badge_branches_count', 'poboček'),
+        'variant' => 'success',
+    ];
+} else {
+    $badges[] = [
+        'label' => $tr('badge_no_branches', 'Bez poboček'),
+        'variant' => 'warning',
+    ];
+}
+
+// ============================================
+// RENDER BENTO GRID
+// ============================================
 ?>
 
-<!-- Header is rendered by detail-sidebar.php using get_detail_header_meta() -->
-
-<div class="saw-detail-wrapper">
-    <div class="saw-detail-stack">
+<div class="sa-detail-wrapper bento-wrapper">
+    <?php 
+    // Initialize Bento
+    if (function_exists('saw_bento_start')) {
         
-        <!-- STATISTICS -->
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('bar-chart-3', 'saw-icon--sm'); ?><?php else: ?>📊<?php endif; ?> <?php echo esc_html($tr('section_statistics', 'Statistiky')); ?></h4>
-            </div>
-            <div class="saw-section-body">
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('stat_active_branches', 'Aktivních poboček')); ?></span>
-                    <span class="saw-info-val"><strong><?php echo $branches_count; ?></strong></span>
-                </div>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('stat_default_branches', 'Výchozí na pobočkách')); ?></span>
-                    <span class="saw-info-val"><strong><?php echo $default_count; ?></strong></span>
-                </div>
-            </div>
-        </div>
+        // Start Bento Grid
+        saw_bento_start('bento-training-languages');
         
-        <!-- ACTIVE BRANCHES -->
-        <?php if (!empty($active_branches)): ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('building-2', 'saw-icon--sm'); ?><?php else: ?>🏢<?php endif; ?> <?php echo esc_html($tr('section_branches', 'Pobočky')); ?> <span class="saw-visit-badge-count"><?php echo $branches_count; ?></span></h4>
-            </div>
-            <div class="saw-section-body" style="padding: 0;">
-                <?php foreach ($active_branches as $branch): ?>
-                <a href="<?php echo esc_url(home_url('/admin/branches/' . intval($branch['id']) . '/')); ?>" 
-                   class="saw-info-row" 
-                   style="display: flex; padding: 12px 20px; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
-                    <span class="saw-info-label" style="flex-shrink: 0;">
-                        <?php 
-                        if (class_exists('SAW_Icons')) {
-                            echo !empty($branch['is_default']) ? SAW_Icons::get('star', 'saw-icon--sm') : SAW_Icons::get('building-2', 'saw-icon--sm');
-                        } else {
-                            echo !empty($branch['is_default']) ? '⭐' : '🏢';
-                        }
-                        ?>
-                    </span>
-                    <span class="saw-info-val" style="flex: 1;">
-                        <?php echo esc_html($branch['name']); ?>
-                        <?php if (!empty($branch['code'])): ?>
-                            <span style="color: #888; font-size: 12px;"><?php echo esc_html($branch['code']); ?></span>
-                        <?php endif; ?>
-                        <?php if (!empty($branch['is_default'])): ?>
-                            <span class="saw-badge saw-badge-success" style="margin-left: 8px; font-size: 10px;"><?php echo esc_html($tr('badge_default', 'Výchozí')); ?></span>
-                        <?php endif; ?>
-                    </span>
-                    <?php if (!empty($branch['display_order'])): ?>
-                    <span style="color: #888; font-size: 12px;">#<?php echo intval($branch['display_order']); ?></span>
-                    <?php endif; ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php else: ?>
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('building-2', 'saw-icon--sm'); ?><?php else: ?>🏢<?php endif; ?> <?php echo esc_html($tr('section_branches', 'Pobočky')); ?></h4>
-            </div>
-            <div class="saw-section-body">
-                <div class="saw-notice saw-notice-warning" style="margin: 0;">
-                    <p style="margin: 0;"><?php echo esc_html($tr('detail_no_branches', 'Tento jazyk není aktivován pro žádnou pobočku.')); ?></p>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
+        // ================================
+        // HEADER
+        // ================================
+        saw_bento_header([
+            'icon' => 'globe',
+            'module' => 'training-languages',
+            'module_label' => $tr('module_name', 'Jazyky školení'),
+            'id' => $item['id'],
+            'title' => $item['language_name'] ?? $tr('unnamed', 'Bez názvu'),
+            'subtitle' => (!empty($item['flag_emoji']) ? $item['flag_emoji'] . ' ' : '') . strtoupper($item['language_code'] ?? ''),
+            'badges' => $badges,
+            'nav_enabled' => true,
+            'stripe' => true,
+            'close_url' => $close_url ?? '',
+        ]);
         
-        <!-- INFO (without ID) -->
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title"><?php if (class_exists('SAW_Icons')): ?><?php echo SAW_Icons::get('info', 'saw-icon--sm'); ?><?php else: ?>ℹ️<?php endif; ?> <?php echo esc_html($tr('section_info', 'Informace')); ?></h4>
-            </div>
-            <div class="saw-section-body">
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_language_code', 'Kód jazyka')); ?></span>
-                    <span class="saw-info-val"><code><?php echo esc_html(strtoupper($item['language_code'])); ?></code></span>
-                </div>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_language_name', 'Název')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['language_name']); ?></span>
-                </div>
-                <?php if ($is_protected): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_protection', 'Ochrana')); ?></span>
-                    <span class="saw-info-val">
-                        <span class="saw-badge saw-badge-info"><?php echo esc_html($tr('badge_system_language', 'Systémový jazyk')); ?></span>
-                    </span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
+        // ================================
+        // STATISTICS (2 stat cards)
+        // ================================
+        saw_bento_stat([
+            'icon' => 'building-2',
+            'value' => $branches_count,
+            'label' => $tr('stat_active_branches', 'Aktivních poboček'),
+            'variant' => 'light-blue',
+            'link' => home_url('/admin/branches/'),
+        ]);
         
-        <!-- METADATA -->
-        <div class="saw-industrial-section">
-            <div class="saw-section-head">
-                <h4 class="saw-section-title">🕐 <?php echo esc_html($tr('section_metadata', 'Metadata')); ?></h4>
-            </div>
-            <div class="saw-section-body">
-                <?php if (!empty($item['created_at_formatted'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_created_at', 'Vytvořeno')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['created_at_formatted']); ?></span>
-                </div>
-                <?php elseif (!empty($item['created_at'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_created_at', 'Vytvořeno')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html(date_i18n('d.m.Y H:i', strtotime($item['created_at']))); ?></span>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($item['updated_at_formatted'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_updated_at', 'Změněno')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html($item['updated_at_formatted']); ?></span>
-                </div>
-                <?php elseif (!empty($item['updated_at'])): ?>
-                <div class="saw-info-row">
-                    <span class="saw-info-label"><?php echo esc_html($tr('detail_updated_at', 'Změněno')); ?></span>
-                    <span class="saw-info-val"><?php echo esc_html(date_i18n('d.m.Y H:i', strtotime($item['updated_at']))); ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
+        saw_bento_stat([
+            'icon' => 'star',
+            'value' => $default_count,
+            'label' => $tr('stat_default_branches', 'Výchozí na pobočkách'),
+            'variant' => 'default',
+        ]);
         
-    </div>
+        // ================================
+        // BRANCHES LIST (if exists)
+        // ================================
+        if (!empty($active_branches)) {
+            $branch_items = array_map(function($branch) {
+                return [
+                    'icon' => !empty($branch['is_default']) ? 'star' : 'building-2',
+                    'name' => $branch['name'],
+                    'meta' => !empty($branch['code']) ? $branch['code'] : '',
+                    'url' => home_url('/admin/branches/' . intval($branch['id']) . '/'),
+                    'active' => true,
+                    'badge' => !empty($branch['is_default']) ? 'Výchozí' : null,
+                    'badge_variant' => 'success',
+                ];
+            }, $active_branches);
+            
+            saw_bento_list([
+                'icon' => 'building-2',
+                'title' => $tr('section_branches', 'Pobočky'),
+                'badge_count' => $branches_count,
+                'items' => $branch_items,
+                'show_all_url' => home_url('/admin/branches/'),
+                'show_all_label' => $tr('show_all', 'Zobrazit všechny'),
+                'max_items' => 5,
+                'colspan' => 2,
+            ]);
+        } else {
+            // Empty state for branches
+            saw_bento_text([
+                'icon' => 'building-2',
+                'title' => $tr('section_branches', 'Pobočky'),
+                'content' => $tr('detail_no_branches', 'Tento jazyk není aktivován pro žádnou pobočku.'),
+                'variant' => 'muted',
+                'colspan' => 2,
+            ]);
+        }
+        
+        // ================================
+        // INFO
+        // ================================
+        $info_fields = [
+            [
+                'label' => $tr('detail_language_code', 'Kód jazyka'),
+                'value' => strtoupper($item['language_code'] ?? ''),
+                'type' => 'code',
+                'copyable' => true,
+            ],
+            [
+                'label' => $tr('detail_language_name', 'Název'),
+                'value' => $item['language_name'] ?? '',
+                'type' => 'text',
+            ],
+            [
+                'label' => $tr('detail_flag', 'Vlajka'),
+                'value' => $item['flag_emoji'] ?? '',
+                'type' => 'text',
+            ],
+        ];
+        
+        if ($is_protected) {
+            $info_fields[] = [
+                'label' => $tr('detail_protection', 'Ochrana'),
+                'value' => $tr('badge_system_language', 'Systémový jazyk'),
+                'type' => 'badge',
+                'variant' => 'info',
+            ];
+        }
+        
+        saw_bento_info([
+            'icon' => 'info',
+            'title' => $tr('section_info', 'Informace'),
+            'fields' => $info_fields,
+            'colspan' => 1,
+        ]);
+        
+        // ================================
+        // METADATA (always last, full width)
+        // ================================
+        saw_bento_meta([
+            'icon' => 'clock',
+            'title' => $tr('section_metadata', 'Metadata'),
+            'created_at' => $item['created_at_formatted'] ?? null,
+            'updated_at' => $item['updated_at_formatted'] ?? null,
+            'colspan' => 'full',
+            'compact' => true,
+        ]);
+        
+        // End Bento Grid
+        saw_bento_end();
+        
+    } else {
+        // Fallback - show error if Bento not loaded
+        echo '<div class="sa-alert sa-alert--warning">';
+        echo 'Bento design system není načten. ';
+        echo '</div>';
+    }
+    ?>
 </div>
-
-<!-- ============================================
-     HEADER FLAG STYLE (for blue header)
-     ============================================ -->
-<style>
-/* Large flag emoji in blue header */
-.saw-header-flag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    font-size: 28px;
-    margin-right: 8px;
-    vertical-align: middle;
-}
-
-/* Code badge in header */
-.saw-badge-code {
-    font-family: monospace;
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: 1px;
-}
-</style>

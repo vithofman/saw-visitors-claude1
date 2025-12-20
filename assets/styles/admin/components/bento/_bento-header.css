@@ -49,7 +49,6 @@
     left: -50px;
 }
 
-/* ===== NAVIGATION BAR ===== */
 .bento-header-nav {
     position: relative;
     display: flex;
@@ -59,10 +58,11 @@
     z-index: 2;
 }
 
-.bento-header-nav-left {
+.bento-header-nav-right {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: auto;
 }
 
 .bento-nav-btn {
@@ -244,58 +244,83 @@
 }
 
 @keyframes bento-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* ===== STRIPE (ŠRAFOVÁNÍ) ===== */
 .bento-header-stripe {
     position: relative;
     height: 8px;
-    background: repeating-linear-gradient(
-        -45deg,
-        var(--bento-brand-500),
-        var(--bento-brand-500) 10px,
-        var(--bento-brand-400) 10px,
-        var(--bento-brand-400) 20px
-    );
+    background: repeating-linear-gradient(-45deg,
+            var(--bento-brand-500),
+            var(--bento-brand-500) 10px,
+            var(--bento-brand-400) 10px,
+            var(--bento-brand-400) 20px);
     z-index: 2;
 }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .bento-header-nav {
-        padding: 12px 16px;
+        padding: 8px 12px;
     }
-    
+
     .bento-header-content {
-        padding: 0 16px 16px;
+        padding: 0 12px 12px;
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .bento-header-main {
-        flex-direction: column;
-        gap: 12px;
+        flex-direction: row;
+        /* Keep horizontal on mobile for compactness */
+        gap: 10px;
+        align-items: center;
     }
-    
+
     .bento-header-icon {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
     }
-    
+
+    .bento-header-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
     .bento-header-title {
-        font-size: 1.375rem;
+        font-size: 1.125rem;
+        margin-bottom: 6px;
     }
-    
+
     .bento-header-badges {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        /* Horizontal badges for compactness */
+        flex-wrap: wrap;
+        gap: 4px;
     }
-    
+
+    .bento-badge {
+        padding: 4px 8px;
+        font-size: 0.6875rem;
+    }
+
     .bento-nav-btn {
         width: 32px;
         height: 32px;
+    }
+
+    .bento-header-stripe {
+        height: 4px;
+        /* Thinner stripe on mobile */
     }
 }
 
@@ -303,5 +328,18 @@
     .bento-header-breadcrumb {
         display: none;
     }
-}
 
+    .bento-header-title {
+        font-size: 1rem;
+    }
+
+    .bento-header-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .bento-header-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+}

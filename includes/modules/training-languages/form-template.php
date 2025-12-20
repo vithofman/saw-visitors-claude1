@@ -48,23 +48,27 @@ $form_action = $is_edit
 ?>
 
 <?php if (!$in_sidebar): ?>
-<div class="saw-page-header">
-    <div class="saw-page-header-content">
-        <h1 class="saw-page-title">
+<div class="sa-page-header">
+    <div class="sa-page-header-content">
+        <h1 class="sa-page-title">
             <?php echo $is_edit 
                 ? esc_html($tr('label_edit', 'Upravit jazyk školení')) 
                 : esc_html($tr('label_create', 'Nový jazyk školení')); ?>
         </h1>
-        <a href="<?php echo esc_url(home_url('/admin/' . $route . '/')); ?>" class="saw-back-button">
-            <span class="saw-back-arrow">←</span>
+        <a href="<?php echo esc_url(home_url('/admin/' . $route . '/')); ?>" class="sa-btn sa-btn--ghost">
+            <?php if (class_exists('SAW_Icons')): ?>
+                <?php echo SAW_Icons::get('chevron-left'); ?>
+            <?php else: ?>
+                <span class="sa-back-arrow">←</span>
+            <?php endif; ?>
             <?php echo esc_html($tr('btn_back', 'Zpět na seznam')); ?>
         </a>
     </div>
 </div>
 <?php endif; ?>
 
-<div class="saw-form-container saw-module-training-languages">
-    <form method="post" action="<?php echo esc_url($form_action); ?>" class="saw-form" data-no-autosave="true">
+<div class="sa-form-container sa-module-training-languages">
+    <form method="post" action="<?php echo esc_url($form_action); ?>" class="sa-form" data-no-autosave="true">
         <?php wp_nonce_field($nonce_action); ?>
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?php echo esc_attr($item['id']); ?>">
@@ -74,26 +78,26 @@ $form_action = $is_edit
         <!-- ============================================
              SECTION: Language Selection
              ============================================ -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('globe', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('globe', 'sa-form-section-icon'); ?>
                 <?php else: ?>
-                    <span class="saw-section-emoji">🌐</span>
+                    <span class="sa-section-emoji">🌐</span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_basic', 'Základní údaje')); ?></strong>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_basic', 'Základní údaje')); ?></strong>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
-                <div class="saw-form-row">
+                <div class="sa-form-row">
                     <!-- Language Select -->
-                    <div class="saw-form-group saw-col-8">
-                        <label for="language_code" class="saw-label saw-required">
+                    <div class="sa-form-group sa-col-8">
+                        <label for="language_code" class="sa-form-label sa-form-label--required">
                             <?php echo esc_html($tr('form_select_language', 'Vyberte jazyk ze seznamu')); ?>
                         </label>
                         <select id="language_code" 
                                 name="language_code" 
-                                class="saw-select"
+                                class="sa-select"
                                 required 
                                 <?php echo $is_edit ? 'disabled' : ''; ?>>
                             <option value="">-- <?php echo esc_html($tr('form_choose_language', 'Zvolte jazyk')); ?> --</option>
@@ -117,16 +121,16 @@ $form_action = $is_edit
                     </div>
                     
                     <!-- Preview Card -->
-                    <div class="saw-form-group saw-col-4">
-                        <label class="saw-label"><?php echo esc_html($tr('form_preview', 'Náhled')); ?></label>
-                        <div class="saw-language-preview" id="language-preview">
+                    <div class="sa-form-group sa-col-4">
+                        <label class="sa-form-label"><?php echo esc_html($tr('form_preview', 'Náhled')); ?></label>
+                        <div class="sa-language-preview" id="language-preview">
                             <?php if (!empty($item['flag_emoji'])): ?>
-                                <div class="saw-preview-flag"><?php echo esc_html($item['flag_emoji']); ?></div>
-                                <div class="saw-preview-name"><?php echo esc_html($item['language_name']); ?></div>
-                                <div class="saw-preview-code"><?php echo esc_html(strtoupper($item['language_code'])); ?></div>
+                                <div class="sa-preview-flag"><?php echo esc_html($item['flag_emoji']); ?></div>
+                                <div class="sa-preview-name"><?php echo esc_html($item['language_name']); ?></div>
+                                <div class="sa-preview-code"><?php echo esc_html(strtoupper($item['language_code'])); ?></div>
                             <?php else: ?>
-                                <div class="saw-preview-empty">
-                                    <span class="saw-preview-empty-icon">🏳️</span>
+                                <div class="sa-preview-empty">
+                                    <span class="sa-preview-empty-icon">🏳️</span>
                                     <span><?php echo esc_html($tr('form_select_to_preview', 'Vyberte jazyk')); ?></span>
                                 </div>
                             <?php endif; ?>
@@ -140,81 +144,81 @@ $form_action = $is_edit
         <!-- ============================================
              SECTION: Branch Activation
              ============================================ -->
-        <details class="saw-form-section" open>
+        <details class="sa-form-section" open>
             <summary>
                 <?php if (class_exists('SAW_Icons')): ?>
-                    <?php echo SAW_Icons::get('building-2', 'saw-section-icon'); ?>
+                    <?php echo SAW_Icons::get('building-2', 'sa-form-section-icon'); ?>
                 <?php else: ?>
-                    <span class="saw-section-emoji">🏢</span>
+                    <span class="sa-section-emoji">🏢</span>
                 <?php endif; ?>
-                <strong><?php echo esc_html($tr('section_branches', 'Aktivace pro pobočky')); ?></strong>
-                <span class="saw-section-badge" id="branches-count">0</span>
+                <strong class="sa-form-section-title"><?php echo esc_html($tr('section_branches', 'Aktivace pro pobočky')); ?></strong>
+                <span class="sa-section-badge" id="branches-count">0</span>
             </summary>
-            <div class="saw-form-section-content">
+            <div class="sa-form-section-content">
                 
                 <!-- Select All -->
-                <div class="saw-form-row saw-form-row-actions">
-                    <label class="saw-checkbox-inline">
+                <div class="sa-form-row sa-form-row-actions">
+                    <label class="sa-checkbox-inline">
                         <input type="checkbox" id="select-all-branches">
                         <span><?php echo esc_html($tr('form_select_all', 'Vybrat vše')); ?></span>
                     </label>
                 </div>
                 
                 <?php if (empty($branches_to_loop)): ?>
-                    <div class="saw-notice saw-notice-warning">
-                        <span class="saw-notice-icon">⚠️</span>
+                    <div class="sa-alert sa-alert--warning">
+                        <span class="sa-alert-icon">⚠️</span>
                         <p><?php echo esc_html($tr('form_no_branches', 'Pro tohoto zákazníka nejsou k dispozici žádné aktivní pobočky.')); ?></p>
                     </div>
                 <?php else: ?>
-                    <div class="saw-branches-grid">
+                    <div class="sa-branches-grid">
                         <?php foreach ($branches_to_loop as $branch): ?>
                             <?php 
                             $branch_id = $branch['id'];
                             $is_active = !empty($branch['is_active']) ? 1 : 0;
                             $is_default = !empty($branch['is_default']) ? 1 : 0;
                             ?>
-                            <div class="saw-branch-row <?php echo $is_active ? 'is-active' : ''; ?>" data-branch-id="<?php echo esc_attr($branch_id); ?>">
+                            <div class="sa-branch-row <?php echo $is_active ? 'is-active' : ''; ?>" data-branch-id="<?php echo esc_attr($branch_id); ?>">
                                 
-                                <div class="saw-branch-info">
-                                    <span class="saw-branch-name"><?php echo esc_html($branch['name']); ?></span>
+                                <div class="sa-branch-info">
+                                    <span class="sa-branch-name"><?php echo esc_html($branch['name']); ?></span>
                                     <?php if (!empty($branch['city'])): ?>
-                                        <span class="saw-branch-city"><?php echo esc_html($branch['city']); ?></span>
+                                        <span class="sa-branch-city"><?php echo esc_html($branch['city']); ?></span>
                                     <?php endif; ?>
                                 </div>
                                 
-                                <div class="saw-branch-controls">
+                                <div class="sa-branch-controls">
                                     
                                     <!-- Hidden input for unchecked state -->
                                     <input type="hidden" 
                                            name="branches[<?php echo esc_attr($branch_id); ?>][active]" 
                                            value="0"
-                                           class="saw-branch-active-hidden">
+                                           class="sa-branch-active-hidden">
                                     
                                     <!-- Active toggle -->
-                                    <label class="saw-toggle" title="<?php echo esc_attr($tr('form_active', 'Aktivní')); ?>">
+                                    <label class="sa-toggle" title="<?php echo esc_attr($tr('form_active', 'Aktivní')); ?>">
                                         <input type="checkbox" 
                                                name="branches[<?php echo esc_attr($branch_id); ?>][active]" 
                                                value="1" 
-                                               class="saw-branch-active-checkbox"
+                                               class="sa-branch-active-checkbox"
                                                <?php checked($is_active, 1); ?>>
-                                        <span class="saw-toggle-slider"></span>
-                                        <span class="saw-toggle-label"><?php echo esc_html($tr('form_active', 'Aktivní')); ?></span>
+                                        <span class="sa-toggle-slider"></span>
+                                        <span class="sa-toggle-label"><?php echo esc_html($tr('form_active', 'Aktivní')); ?></span>
                                     </label>
                                     
                                     <!-- Default radio -->
-                                    <label class="saw-radio-button <?php echo $is_default ? 'is-selected' : ''; ?>" title="<?php echo esc_attr($tr('form_set_default', 'Nastavit jako výchozí')); ?>">
+                                    <label class="sa-radio-button <?php echo $is_default ? 'is-selected' : ''; ?>" title="<?php echo esc_attr($tr('form_set_default', 'Nastavit jako výchozí')); ?>">
                                         <input type="checkbox" 
-                                               class="saw-branch-default-checkbox"
+                                               class="sa-branch-default-checkbox"
                                                data-branch-id="<?php echo esc_attr($branch_id); ?>"
                                                <?php checked($is_default, 1); ?>
                                                <?php disabled(!$is_active, true); ?>>
-                                        <span class="saw-default-star">⭐</span>
+                                        <span class="sa-default-star">⭐</span>
                                         <span><?php echo esc_html($tr('form_default', 'Výchozí')); ?></span>
                                     </label>
                                     <input type="hidden" 
                                            name="branches[<?php echo esc_attr($branch_id); ?>][is_default]" 
                                            value="<?php echo $is_default ? '1' : '0'; ?>" 
-                                           class="saw-branch-default-hidden">
+                                           class="sa-branch-default-hidden">
                                     
                                 </div>
                             </div>
@@ -233,14 +237,13 @@ $form_action = $is_edit
         $in_sidebar = isset($GLOBALS['saw_sidebar_form']) && $GLOBALS['saw_sidebar_form'];
         if (!$in_sidebar): 
         ?>
-        <div class="saw-form-actions">
-            <button type="submit" class="saw-btn saw-btn-primary">
-                <span class="saw-btn-icon">💾</span>
+        <div class="sa-form-actions">
+            <button type="submit" class="sa-btn sa-btn--primary">
                 <?php echo $is_edit 
                     ? esc_html($tr('btn_save_changes', 'Uložit změny')) 
                     : esc_html($tr('btn_create', 'Vytvořit jazyk')); ?>
             </button>
-            <a href="<?php echo esc_url(home_url('/admin/' . $route . '/')); ?>" class="saw-btn saw-btn-secondary">
+            <a href="<?php echo esc_url(home_url('/admin/' . $route . '/')); ?>" class="sa-btn sa-btn--secondary">
                 <?php echo esc_html($tr('btn_cancel', 'Zrušit')); ?>
             </a>
         </div>
@@ -253,23 +256,28 @@ $form_action = $is_edit
      FORM STYLES
      ============================================ -->
 <style>
-/* Form container should use parent padding, not its own */
-.saw-sidebar .saw-form-container.saw-module-training-languages {
+/* Form container - support both sa-* and saw-* classes */
+.saw-sidebar .saw-form-container.saw-module-training-languages,
+.sa-sidebar .sa-form-container.sa-module-training-languages {
     margin: 0;
     padding: 0;
 }
 
-.saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content {
+.saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content,
+.sa-sidebar .sa-form-container.sa-module-training-languages .sa-form-section-content {
     padding: 16px 20px;
 }
 
 @media (min-width: 768px) {
-    .saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content {
+    .saw-sidebar .saw-form-container.saw-module-training-languages .saw-form-section-content,
+    .sa-sidebar .sa-form-container.sa-module-training-languages .sa-form-section-content {
         padding: 20px 24px;
     }
 }
+
 /* Language Preview Card */
-.saw-language-preview {
+.saw-language-preview,
+.sa-language-preview {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     border: 2px solid #cbd5e1;
     border-radius: 12px;
@@ -283,18 +291,21 @@ $form_action = $is_edit
     gap: 8px;
 }
 
-.saw-preview-flag {
+.saw-preview-flag,
+.sa-preview-flag {
     font-size: 48px;
     line-height: 1;
 }
 
-.saw-preview-name {
+.saw-preview-name,
+.sa-preview-name {
     font-size: 18px;
     font-weight: 700;
     color: #0f172a;
 }
 
-.saw-preview-code {
+.saw-preview-code,
+.sa-preview-code {
     display: inline-block;
     padding: 4px 12px;
     background: #0f172a;
@@ -306,7 +317,8 @@ $form_action = $is_edit
     letter-spacing: 1px;
 }
 
-.saw-preview-empty {
+.saw-preview-empty,
+.sa-preview-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -314,50 +326,37 @@ $form_action = $is_edit
     color: #94a3b8;
 }
 
-.saw-preview-empty-icon {
+.saw-preview-empty-icon,
+.sa-preview-empty-icon {
     font-size: 32px;
     line-height: 1;
 }
 
-/* Section Emoji Icons */
-.saw-section-emoji {
+/* Section Icons */
+.saw-section-emoji,
+.sa-section-emoji {
     font-size: 18px;
     line-height: 1;
     margin-right: 4px;
 }
 
-/* Notice Icons */
-.saw-notice-icon {
-    font-size: 16px;
-    line-height: 1;
-}
-
 /* Default Star */
-.saw-default-star {
+.saw-default-star,
+.sa-default-star {
     font-size: 14px;
     line-height: 1;
-}
-
-/* Back Arrow */
-.saw-back-arrow {
-    font-size: 14px;
-    margin-right: 4px;
-}
-
-/* Button Icon */
-.saw-btn-icon {
-    font-size: 14px;
-    margin-right: 4px;
 }
 
 /* Branches Grid */
-.saw-branches-grid {
+.saw-branches-grid,
+.sa-branches-grid {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.saw-branch-row {
+.saw-branch-row,
+.sa-branch-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -368,17 +367,20 @@ $form_action = $is_edit
     transition: all 0.2s ease;
 }
 
-.saw-branch-row:hover {
+.saw-branch-row:hover,
+.sa-branch-row:hover {
     border-color: #cbd5e1;
     background: #ffffff;
 }
 
-.saw-branch-row.is-active {
+.saw-branch-row.is-active,
+.sa-branch-row.is-active {
     background: #f0fdf4;
     border-color: #86efac;
 }
 
-.saw-branch-info {
+.saw-branch-info,
+.sa-branch-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -386,18 +388,21 @@ $form_action = $is_edit
     min-width: 0;
 }
 
-.saw-branch-name {
+.saw-branch-name,
+.sa-branch-name {
     font-weight: 600;
     color: #0f172a;
     font-size: 14px;
 }
 
-.saw-branch-city {
+.saw-branch-city,
+.sa-branch-city {
     font-size: 12px;
     color: #64748b;
 }
 
-.saw-branch-controls {
+.saw-branch-controls,
+.sa-branch-controls {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -405,18 +410,21 @@ $form_action = $is_edit
 }
 
 /* Toggle Switch */
-.saw-toggle {
+.saw-toggle,
+.sa-toggle {
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
 }
 
-.saw-toggle input {
+.saw-toggle input,
+.sa-toggle input {
     display: none;
 }
 
-.saw-toggle-slider {
+.saw-toggle-slider,
+.sa-toggle-slider {
     width: 36px;
     height: 20px;
     background: #cbd5e1;
@@ -425,7 +433,8 @@ $form_action = $is_edit
     transition: background 0.2s;
 }
 
-.saw-toggle-slider::after {
+.saw-toggle-slider::after,
+.sa-toggle-slider::after {
     content: '';
     position: absolute;
     top: 2px;
@@ -437,21 +446,25 @@ $form_action = $is_edit
     transition: transform 0.2s;
 }
 
-.saw-toggle input:checked + .saw-toggle-slider {
+.saw-toggle input:checked + .saw-toggle-slider,
+.sa-toggle input:checked + .sa-toggle-slider {
     background: #22c55e;
 }
 
-.saw-toggle input:checked + .saw-toggle-slider::after {
+.saw-toggle input:checked + .saw-toggle-slider::after,
+.sa-toggle input:checked + .sa-toggle-slider::after {
     transform: translateX(16px);
 }
 
-.saw-toggle-label {
+.saw-toggle-label,
+.sa-toggle-label {
     font-size: 13px;
     color: #64748b;
 }
 
 /* Radio Button Style */
-.saw-radio-button {
+.saw-radio-button,
+.sa-radio-button {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -465,35 +478,43 @@ $form_action = $is_edit
     transition: all 0.2s;
 }
 
-.saw-radio-button input {
+.saw-radio-button input,
+.sa-radio-button input {
     display: none;
 }
 
-.saw-radio-button .saw-default-star {
+.saw-radio-button .saw-default-star,
+.sa-radio-button .sa-default-star {
     opacity: 0.3;
     transition: opacity 0.2s;
 }
 
 .saw-radio-button.is-selected,
-.saw-radio-button:has(input:checked) {
+.saw-radio-button:has(input:checked),
+.sa-radio-button.is-selected,
+.sa-radio-button:has(input:checked) {
     background: #fef3c7;
     border-color: #f59e0b;
     color: #92400e;
 }
 
 .saw-radio-button.is-selected .saw-default-star,
-.saw-radio-button:has(input:checked) .saw-default-star {
+.saw-radio-button:has(input:checked) .saw-default-star,
+.sa-radio-button.is-selected .sa-default-star,
+.sa-radio-button:has(input:checked) .sa-default-star {
     opacity: 1;
 }
 
 /* Actions Row */
-.saw-form-row-actions {
+.saw-form-row-actions,
+.sa-form-row-actions {
     margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid #e2e8f0;
 }
 
-.saw-checkbox-inline {
+.saw-checkbox-inline,
+.sa-checkbox-inline {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -502,14 +523,16 @@ $form_action = $is_edit
     color: #475569;
 }
 
-.saw-checkbox-inline input[type="checkbox"] {
+.saw-checkbox-inline input[type="checkbox"],
+.sa-checkbox-inline input[type="checkbox"] {
     width: 16px;
     height: 16px;
     cursor: pointer;
 }
 
 /* Section Badge */
-.saw-section-badge {
+.saw-section-badge,
+.sa-section-badge {
     margin-left: auto;
     padding: 2px 10px;
     background: #3b82f6;
@@ -537,8 +560,12 @@ $form_action = $is_edit
     });
     
     function initLanguageForm() {
-        var $form = $('.saw-module-training-languages .saw-form');
-        if (!$form.length) return;
+        var $form = $('.sa-module-training-languages .sa-form');
+        if (!$form.length) {
+            // Fallback for legacy class names
+            $form = $('.saw-module-training-languages .saw-form');
+            if (!$form.length) return;
+        }
         
         var $select = $form.find('#language_code');
         var $preview = $form.find('#language-preview');
@@ -559,14 +586,14 @@ $form_action = $is_edit
             
             if (flag && name && code) {
                 $preview.html(
-                    '<div class="saw-preview-flag">' + flag + '</div>' +
-                    '<div class="saw-preview-name">' + name + '</div>' +
-                    '<div class="saw-preview-code">' + code.toUpperCase() + '</div>'
+                    '<div class="sa-preview-flag">' + flag + '</div>' +
+                    '<div class="sa-preview-name">' + name + '</div>' +
+                    '<div class="sa-preview-code">' + code.toUpperCase() + '</div>'
                 );
             } else {
                 $preview.html(
-                    '<div class="saw-preview-empty">' +
-                    '<span class="saw-preview-empty-icon">🏳️</span>' +
+                    '<div class="sa-preview-empty">' +
+                    '<span class="sa-preview-empty-icon">🏳️</span>' +
                     '<span><?php echo esc_js($tr('form_select_to_preview', 'Vyberte jazyk')); ?></span>' +
                     '</div>'
                 );
@@ -576,44 +603,44 @@ $form_action = $is_edit
         // Select all branches
         $selectAll.off('change.all').on('change.all', function() {
             var checked = $(this).is(':checked');
-            $form.find('.saw-branch-active-checkbox').each(function() {
+            $form.find('.sa-branch-active-checkbox').each(function() {
                 $(this).prop('checked', checked).trigger('change');
             });
         });
         
         // Branch active toggle
-        $form.find('.saw-branch-active-checkbox').off('change.active').on('change.active', function() {
-            var $row = $(this).closest('.saw-branch-row');
+        $form.find('.sa-branch-active-checkbox').off('change.active').on('change.active', function() {
+            var $row = $(this).closest('.sa-branch-row');
             var isActive = $(this).is(':checked');
             var $checkbox = $(this);
             
             $row.toggleClass('is-active', isActive);
             
             // Enable/disable controls
-            $row.find('.saw-branch-default-checkbox, .saw-input-mini').prop('disabled', !isActive);
+            $row.find('.sa-branch-default-checkbox, .sa-input-mini').prop('disabled', !isActive);
             
             // If deactivated, also uncheck default
             if (!isActive) {
-                $row.find('.saw-branch-default-checkbox').prop('checked', false).trigger('change');
+                $row.find('.sa-branch-default-checkbox').prop('checked', false).trigger('change');
             }
             
             updateBranchesCount();
         });
         
         // Default checkbox (only one can be default)
-        $form.find('.saw-branch-default-checkbox').off('change.default').on('change.default', function() {
+        $form.find('.sa-branch-default-checkbox').off('change.default').on('change.default', function() {
             var $this = $(this);
             var branchId = $this.data('branch-id');
-            var $row = $this.closest('.saw-branch-row');
-            var $hidden = $row.find('.saw-branch-default-hidden');
-            var $label = $this.closest('.saw-radio-button');
+            var $row = $this.closest('.sa-branch-row');
+            var $hidden = $row.find('.sa-branch-default-hidden');
+            var $label = $this.closest('.sa-radio-button');
             
             if ($this.is(':checked')) {
                 // Uncheck all others
-                $form.find('.saw-branch-default-checkbox').not(this).each(function() {
+                $form.find('.sa-branch-default-checkbox').not(this).each(function() {
                     $(this).prop('checked', false);
-                    $(this).closest('.saw-branch-row').find('.saw-branch-default-hidden').val('0');
-                    $(this).closest('.saw-radio-button').removeClass('is-selected');
+                    $(this).closest('.sa-branch-row').find('.sa-branch-default-hidden').val('0');
+                    $(this).closest('.sa-radio-button').removeClass('is-selected');
                 });
                 $hidden.val('1');
                 $label.addClass('is-selected');
@@ -624,7 +651,7 @@ $form_action = $is_edit
         });
         
         function updateBranchesCount() {
-            var count = $form.find('.saw-branch-active-checkbox:checked').length;
+            var count = $form.find('.sa-branch-active-checkbox:checked').length;
             $branchesCount.text(count);
         }
         
@@ -642,8 +669,8 @@ $form_action = $is_edit
             e.preventDefault();
             
             // Remove hidden inputs for checked checkboxes (so checkbox value takes precedence)
-            $form.find('.saw-branch-active-checkbox:checked').each(function() {
-                var branchId = $(this).closest('.saw-branch-row').data('branch-id');
+            $form.find('.sa-branch-active-checkbox:checked').each(function() {
+                var branchId = $(this).closest('.sa-branch-row').data('branch-id');
                 $form.find('input[name="branches[' + branchId + '][active]"][type="hidden"]').remove();
             });
             
